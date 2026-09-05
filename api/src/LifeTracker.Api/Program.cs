@@ -77,7 +77,9 @@ app.MapGet("/health", () => Results.Ok(new
     timestamp = DateTime.UtcNow
 })).WithTags("Diagnóstico");
 
-// Registrar Endpoints de Salud & Estudios Médicos
+// Registrar Endpoints de Módulos
 app.MapHealthEndpoints();
+app.MapHabitEndpoints();
+app.MapDailyHubEndpoints();
 
 app.Run();

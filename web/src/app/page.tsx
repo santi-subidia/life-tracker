@@ -88,9 +88,25 @@ export default function HomePage() {
           <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-neutral-50 mb-3">
             Toda tu vida en un solo lugar.
           </h2>
-          <p className="text-neutral-400 text-sm sm:text-base leading-relaxed">
+          <p className="text-neutral-400 text-sm sm:text-base leading-relaxed mb-6">
             Plataforma personal que unifica tus métricas de salud, hábitos diarios, segundo cerebro, proyectos y formación bajo un mismo sistema inteligente.
           </p>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/hoy"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-neutral-950 font-bold text-sm shadow-lg shadow-emerald-500/20 transition"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>Abrir Daily Hub ("Hoy")</span>
+            </Link>
+            <Link
+              href="/salud"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-neutral-800 text-sm font-medium transition"
+            >
+              <Activity className="w-4 h-4 text-rose-500" />
+              <span>Estudios Médicos</span>
+            </Link>
+          </div>
         </div>
       </section>
 

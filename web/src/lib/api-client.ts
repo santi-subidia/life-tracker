@@ -1,5 +1,9 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
 
+// ==============================================================================
+// HEALTH & MEDICAL STUDIES
+// ==============================================================================
+
 export interface ExtractedClinicalValue {
   metricName: string;
   value: string;
@@ -55,6 +59,98 @@ export interface MetricComparison {
   history: MetricDataPoint[];
 }
 
+// ==============================================================================
+// HABITS & ROUTINES
+// ==============================================================================
+
+export interface HabitFrequency {
+  type: "daily" | "specific_days" | "times_per_week";
+  targetDaysPerWeek?: number;
+  specificDays?: number[]; // 0=Sunday, 1=Monday...
+}
+
+export interface Habit {
+  id: string;
+  userId: string;
+  name: string;
+  description?: string;
+  category: string;
+  frequency: HabitFrequency;
+  color?: string;
+  icon?: string;
+  isArchived: boolean;
+  currentStreak: number;
+  longestStreak: number;
+  isCompletedToday: boolean;
+  createdAt: string;
+}
+
+export interface CreateHabitPayload {
+  name: string;
+  description?: string;
+  category: string;
+  frequencyType: string;
+  targetDaysPerWeek?: number;
+  specificDays?: number[];
+  color?: string;
+  icon?: string;
+}
+
+export interface ToggleHabitResult {
+  habitId: string;
+  date: string;
+  status: "completed" | "pending";
+  currentStreak: number;
+  longestStreak: number;
+}
+
+// ==============================================================================
+// DAILY HUB (VISTA HOY)
+// ==============================================================================
+
+export interface DailyLog {
+  id: string;
+  userId: string;
+  date: string;
+  moodScore?: number;
+  energyScore?: number;
+  summaryText?: string;
+  updatedAt: string;
+}
+
+export interface TodayHabitItem {
+  id: string;
+  name: string;
+  category: string;
+  color?: string;
+  icon?: string;
+  isCompletedToday: boolean;
+  currentStreak: number;
+  longestStreak: number;
+  frequencyDescription: string;
+}
+
+export interface TodayTimelineItem {
+  id: string;
+  timestamp: string;
+  sourceModule: string;
+  eventType: string;
+  title: string;
+  summary?: string;
+}
+
+export interface DailyHubData {
+  date: string;
+  dailyLog?: DailyLog;
+  habits: TodayHabitItem[];
+  completionPercentage: number;
+  todayTimeline: TodayTimelineItem[];
+}
+
+// ==============================================================================
+// API CLIENT IMPLEMENTATION
+// ==============================================================================
+
 export class LifeTrackerApiClient {
   private static getHeaders(token?: string): HeadersInit {
     const headers: Record<string, string> = {};
@@ -64,7 +160,8 @@ export class LifeTrackerApiClient {
     return headers;
   }
 
-  // 1. Extraer datos con Gemini y subir a R2
+  // --- HEALTH ---
+
   static async extractStudy(file: File, token?: string): Promise<ExtractedStudyResult> {
     const formData = new FormData();
     formData.append("file", file);
@@ -83,7 +180,6 @@ export class LifeTrackerApiClient {
     return res.json();
   }
 
-  // 2. Guardar estudio confirmado
   static async saveStudy(studyData: {
     studyType: string;
     studyDate: string;
@@ -115,7 +211,6 @@ export class LifeTrackerApiClient {
     return res.json();
   }
 
-  // 3. Listar estudios
   static async getStudies(year?: number, token?: string): Promise<HealthStudy[]> {
     const url = new URL(`${API_BASE_URL}/api/health/studies`);
     if (year) url.searchParams.set("year", year.toString());
@@ -128,7 +223,6 @@ export class LifeTrackerApiClient {
     return res.json();
   }
 
-  // 4. Comparación de métricas
   static async compareMetric(metricName: string, token?: string): Promise<MetricComparison> {
     const url = new URL(`${API_BASE_URL}/api/health/metrics/compare`);
     url.searchParams.set("name", metricName);
@@ -141,13 +235,100 @@ export class LifeTrackerApiClient {
     return res.json();
   }
 
-  // 5. Lista de métricas disponibles
   static async getAvailableMetrics(token?: string): Promise<string[]> {
     const res = await fetch(`${API_BASE_URL}/api/health/metrics`, {
       headers: this.getHeaders(token),
     });
 
     if (!res.ok) throw new Error("Error al obtener las métricas disponibles.");
+    return res.json();
+  }
+
+  // --- HABITS ---
+
+  static async getHabits(includeArchived = false, token?: string): Promise<Habit[]> {
+    const url = new URL(`${API_BASE_URL}/api/habits`);
+    if (includeArchived) url.searchParams.set("includeArchived", "true");
+
+    const res = await fetch(url.toString(), {
+      headers: this.getHeaders(token),
+    });
+
+    if (!res.ok) throw new Error("Error al obtener la lista de hábitos.");
+    return res.json();
+  }
+
+  static async createHabit(payload: CreateHabitPayload, token?: string): Promise<Habit> {
+    const res = await fetch(`${API_BASE_URL}/api/habits`, {
+      method: "POST",
+      headers: {
+        ...this.getHeaders(token),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Error al crear el hábito.");
+    }
+
+    return res.json();
+  }
+
+  static async toggleHabit(habitId: string, date?: string, notes?: string, token?: string): Promise<ToggleHabitResult> {
+    const res = await fetch(`${API_BASE_URL}/api/habits/${habitId}/toggle`, {
+      method: "POST",
+      headers: {
+        ...this.getHeaders(token),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ date, notes }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Error al registrar hábito.");
+    }
+
+    return res.json();
+  }
+
+  static async archiveHabit(habitId: string, token?: string): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/api/habits/${habitId}`, {
+      method: "DELETE",
+      headers: this.getHeaders(token),
+    });
+
+    if (!res.ok) throw new Error("Error al archivar el hábito.");
+  }
+
+  // --- DAILY HUB ---
+
+  static async getDailyHubToday(token?: string): Promise<DailyHubData> {
+    const res = await fetch(`${API_BASE_URL}/api/daily-hub/today`, {
+      headers: this.getHeaders(token),
+    });
+
+    if (!res.ok) throw new Error("Error al cargar el Daily Hub de hoy.");
+    return res.json();
+  }
+
+  static async updateDailyLogToday(payload: { moodScore?: number; energyScore?: number; summaryText?: string }, token?: string): Promise<DailyLog> {
+    const res = await fetch(`${API_BASE_URL}/api/daily-logs/today`, {
+      method: "PUT",
+      headers: {
+        ...this.getHeaders(token),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Error al guardar el check-in diario.");
+    }
+
     return res.json();
   }
 }

@@ -2,7 +2,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using LifeTracker.Application.Common.Interfaces;
+using LifeTracker.Application.Habits.Services;
 using LifeTracker.Application.Health.Services;
+using LifeTracker.Application.Timeline.Services;
+using LifeTracker.Domain.Habits;
 using LifeTracker.Infrastructure.Ai;
 using LifeTracker.Infrastructure.Persistence;
 using LifeTracker.Infrastructure.Storage;
@@ -20,7 +23,6 @@ public static class DependencyInjection
 
         if (string.IsNullOrWhiteSpace(connectionString) || connectionString.Contains("your-project"))
         {
-            // Usar InMemory o mock local para desarrollo hasta conectar Supabase
             services.AddDbContext<LifeTrackerDbContext>(options =>
                 options.UseNpgsql("Host=localhost;Database=life_tracker;Username=postgres;Password=postgres"));
         }
@@ -36,8 +38,14 @@ public static class DependencyInjection
         services.AddSingleton<IStorageService, CloudflareR2StorageService>();
         services.AddHttpClient<IAiExtractorService, GeminiAiExtractorService>();
 
-        // Domain Services
+        // Domain Services & Deep Modules
+        services.AddSingleton<IStreakCalculator, StreakCalculator>();
+        services.AddScoped<IHabitTimelineProjector, HabitTimelineProjector>();
+
+        // Application Services
         services.AddScoped<IHealthService, HealthService>();
+        services.AddScoped<IHabitService, HabitService>();
+        services.AddScoped<IDailyHubService, DailyHubService>();
 
         return services;
     }

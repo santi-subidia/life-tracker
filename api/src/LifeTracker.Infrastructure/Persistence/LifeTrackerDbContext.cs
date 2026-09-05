@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using LifeTracker.Application.Common.Interfaces;
+using LifeTracker.Domain.Habits;
 using LifeTracker.Domain.Health;
 using LifeTracker.Domain.Timeline;
 
@@ -16,6 +17,8 @@ public class LifeTrackerDbContext : DbContext, ILifeTrackerDbContext
     public DbSet<HealthClinicalValue> HealthClinicalValues => Set<HealthClinicalValue>();
     public DbSet<DailyLog> DailyLogs => Set<DailyLog>();
     public DbSet<TimelineItem> TimelineItems => Set<TimelineItem>();
+    public DbSet<HabitDefinition> HabitDefinitions => Set<HabitDefinition>();
+    public DbSet<HabitLog> HabitLogs => Set<HabitLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
