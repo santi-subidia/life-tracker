@@ -91,13 +91,20 @@ export default function HomePage() {
           <p className="text-neutral-400 text-sm sm:text-base leading-relaxed mb-6">
             Plataforma personal que unifica tus métricas de salud, hábitos diarios, segundo cerebro, proyectos y formación bajo un mismo sistema inteligente.
           </p>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <Link
               href="/hoy"
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-neutral-950 font-bold text-sm shadow-lg shadow-emerald-500/20 transition"
             >
               <Sparkles className="w-4 h-4" />
               <span>Abrir Daily Hub ("Hoy")</span>
+            </Link>
+            <Link
+              href="/notas"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-950/60 hover:bg-indigo-900/60 text-indigo-200 hover:text-white border border-indigo-800/60 text-sm font-medium transition shadow-lg shadow-indigo-950/30"
+            >
+              <BookOpen className="w-4 h-4 text-indigo-400" />
+              <span>Segundo Cerebro</span>
             </Link>
             <Link
               href="/salud"

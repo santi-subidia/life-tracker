@@ -81,5 +81,6 @@ app.MapGet("/health", () => Results.Ok(new
 app.MapHealthEndpoints();
 app.MapHabitEndpoints();
 app.MapDailyHubEndpoints();
+app.MapNoteEndpoints();
 
 app.Run();

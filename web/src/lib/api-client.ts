@@ -148,6 +148,93 @@ export interface DailyHubData {
 }
 
 // ==============================================================================
+// NOTES & SECOND BRAIN (OBSIDIAN-STYLE)
+// ==============================================================================
+
+export interface NoteListItem {
+  id: string;
+  slug: string;
+  title: string;
+  snippet: string;
+  tags: string[];
+  pinned: boolean;
+  isStub: boolean;
+  outgoingLinksCount: number;
+  backlinksCount: number;
+  updatedAt: string;
+}
+
+export interface OutgoingLink {
+  targetNoteId: string;
+  targetSlug: string;
+  targetTitle: string;
+  alias?: string | null;
+  isStub: boolean;
+}
+
+export interface BacklinkItem {
+  sourceNoteId: string;
+  sourceSlug: string;
+  sourceTitle: string;
+  linkText?: string | null;
+  contextSnippet: string;
+}
+
+export interface NoteDetail {
+  id: string;
+  slug: string;
+  title: string;
+  content: string;
+  tags: string[];
+  pinned: boolean;
+  isStub: boolean;
+  createdAt: string;
+  updatedAt: string;
+  outgoingLinks: OutgoingLink[];
+  backlinks: BacklinkItem[];
+}
+
+export interface CreateNotePayload {
+  title: string;
+  content: string;
+  pinned?: boolean;
+}
+
+export interface UpdateNotePayload {
+  title: string;
+  content: string;
+  pinned?: boolean;
+}
+
+export interface GraphNode {
+  id: string;
+  slug: string;
+  title: string;
+  isStub: boolean;
+  tags: string[];
+  connectionsCount: number;
+}
+
+export interface GraphEdge {
+  id: string;
+  source: string;
+  target: string;
+  label?: string | null;
+}
+
+export interface GraphData {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+}
+
+export interface NoteAutocompleteItem {
+  id: string;
+  slug: string;
+  title: string;
+  tags: string[];
+}
+
+// ==============================================================================
 // API CLIENT IMPLEMENTATION
 // ==============================================================================
 
@@ -331,4 +418,110 @@ export class LifeTrackerApiClient {
 
     return res.json();
   }
+
+  // --- NOTES & SECOND BRAIN ---
+
+  static async getNotes(
+    search?: string,
+    tag?: string,
+    includeArchived = false,
+    includeStubs = false,
+    token?: string
+  ): Promise<NoteListItem[]> {
+    const url = new URL(`${API_BASE_URL}/api/notes`);
+    if (search) url.searchParams.set("search", search);
+    if (tag) url.searchParams.set("tag", tag);
+    if (includeArchived) url.searchParams.set("includeArchived", "true");
+    if (includeStubs) url.searchParams.set("includeStubs", "true");
+
+    const res = await fetch(url.toString(), {
+      headers: this.getHeaders(token),
+    });
+
+    if (!res.ok) throw new Error("Error al obtener la lista de notas.");
+    return res.json();
+  }
+
+  static async getNote(idOrSlug: string, token?: string): Promise<NoteDetail> {
+    const res = await fetch(`${API_BASE_URL}/api/notes/${encodeURIComponent(idOrSlug)}`, {
+      headers: this.getHeaders(token),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Error al cargar la nota solicitada.");
+    }
+
+    return res.json();
+  }
+
+  static async createNote(payload: CreateNotePayload, token?: string): Promise<NoteDetail> {
+    const res = await fetch(`${API_BASE_URL}/api/notes`, {
+      method: "POST",
+      headers: {
+        ...this.getHeaders(token),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Error al crear la nota.");
+    }
+
+    return res.json();
+  }
+
+  static async updateNote(id: string, payload: UpdateNotePayload, token?: string): Promise<NoteDetail> {
+    const res = await fetch(`${API_BASE_URL}/api/notes/${id}`, {
+      method: "PUT",
+      headers: {
+        ...this.getHeaders(token),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Error al actualizar la nota.");
+    }
+
+    return res.json();
+  }
+
+  static async deleteNote(id: string, permanent = false, token?: string): Promise<void> {
+    const url = new URL(`${API_BASE_URL}/api/notes/${id}`);
+    if (permanent) url.searchParams.set("permanent", "true");
+
+    const res = await fetch(url.toString(), {
+      method: "DELETE",
+      headers: this.getHeaders(token),
+    });
+
+    if (!res.ok) throw new Error("Error al eliminar la nota.");
+  }
+
+  static async getNotesGraph(token?: string): Promise<GraphData> {
+    const res = await fetch(`${API_BASE_URL}/api/notes/graph`, {
+      headers: this.getHeaders(token),
+    });
+
+    if (!res.ok) throw new Error("Error al cargar la topología de red de notas.");
+    return res.json();
+  }
+
+  static async autocompleteNotes(query: string, token?: string): Promise<NoteAutocompleteItem[]> {
+    const url = new URL(`${API_BASE_URL}/api/notes/autocomplete`);
+    if (query) url.searchParams.set("query", query);
+
+    const res = await fetch(url.toString(), {
+      headers: this.getHeaders(token),
+    });
+
+    if (!res.ok) throw new Error("Error al consultar sugerencias de notas.");
+    return res.json();
+  }
 }
+

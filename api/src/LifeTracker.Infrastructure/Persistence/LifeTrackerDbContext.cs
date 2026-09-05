@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using LifeTracker.Application.Common.Interfaces;
 using LifeTracker.Domain.Habits;
 using LifeTracker.Domain.Health;
+using LifeTracker.Domain.Notes;
 using LifeTracker.Domain.Timeline;
 
 namespace LifeTracker.Infrastructure.Persistence;
@@ -19,6 +20,8 @@ public class LifeTrackerDbContext : DbContext, ILifeTrackerDbContext
     public DbSet<TimelineItem> TimelineItems => Set<TimelineItem>();
     public DbSet<HabitDefinition> HabitDefinitions => Set<HabitDefinition>();
     public DbSet<HabitLog> HabitLogs => Set<HabitLog>();
+    public DbSet<Note> Notes => Set<Note>();
+    public DbSet<NoteLink> NoteLinks => Set<NoteLink>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
