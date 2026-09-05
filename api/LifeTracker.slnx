@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/LifeTracker.Api/LifeTracker.Api.csproj" />
+    <Project Path="src/LifeTracker.Application/LifeTracker.Application.csproj" />
+    <Project Path="src/LifeTracker.Domain/LifeTracker.Domain.csproj" />
+    <Project Path="src/LifeTracker.Infrastructure/LifeTracker.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/LifeTracker.Domain.Tests/LifeTracker.Domain.Tests.csproj" />
+  </Folder>
+</Solution>

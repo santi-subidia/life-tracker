@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: life_tracker_api
+    restart: always
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:5000
+      - ConnectionStrings__SupabasePostgres=${SUPABASE_CONNECTION_STRING}
+      - Supabase__Url=${SUPABASE_URL}
+      - Supabase__AnonKey=${SUPABASE_ANON_KEY}
+      - Supabase__JwtSecret=${SUPABASE_JWT_SECRET}
+      - CloudflareR2__AccountId=${R2_ACCOUNT_ID}
+      - CloudflareR2__AccessKeyId=${R2_ACCESS_KEY_ID}
+      - CloudflareR2__SecretAccessKey=${R2_SECRET_ACCESS_KEY}
+      - CloudflareR2__BucketName=${R2_BUCKET_NAME}
+      - CloudflareR2__PublicCustomDomain=${R2_PUBLIC_CUSTOM_DOMAIN}
+      - Gemini__ApiKey=${GEMINI_API_KEY}
+    ports:
+      - "5000:5000"
+    networks:
+      - life_tracker_network
+
+networks:
+  life_tracker_network:
+    driver: bridge
