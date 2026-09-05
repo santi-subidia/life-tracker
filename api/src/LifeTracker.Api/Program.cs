@@ -1,41 +1,83 @@
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using LifeTracker.Api.Endpoints;
+using LifeTracker.Infrastructure;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+// 1. Inyección de dependencias de Infraestructura y Aplicación
+builder.Services.AddInfrastructureServices(builder.Configuration);
+
+// 2. CORS para desarrollo con Next.js en puerto 3000
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy.WithOrigins(
+                "http://localhost:3000",
+                "https://localhost:3000"
+            )
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
+});
+
+// 3. Autenticación JWT con Supabase
+var jwtSecret = builder.Configuration["Supabase:JwtSecret"] 
+                ?? Environment.GetEnvironmentVariable("SUPABASE_JWT_SECRET");
+
+if (!string.IsNullOrWhiteSpace(jwtSecret) && jwtSecret != "your-supabase-jwt-secret")
+{
+    var key = Encoding.UTF8.GetBytes(jwtSecret);
+    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(options =>
+        {
+            options.RequireHttpsMetadata = false;
+            options.SaveToken = true;
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(key),
+                ValidateIssuer = false,
+                ValidateAudience = false,
+                ClockSkew = TimeSpan.Zero
+            };
+        });
+}
+else
+{
+    builder.Services.AddAuthentication();
+}
+
+builder.Services.AddAuthorization();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+app.UseCors("AllowFrontend");
+app.UseAuthentication();
+app.UseAuthorization();
 
-var summaries = new[]
+// Health Check Endpoint
+app.MapGet("/health", () => Results.Ok(new
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+    status = "Healthy",
+    service = "LifeTracker.Api",
+    runtime = ".NET 10",
+    timestamp = DateTime.UtcNow
+})).WithTags("Diagnóstico");
 
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+// Registrar Endpoints de Salud & Estudios Médicos
+app.MapHealthEndpoints();
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
