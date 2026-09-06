@@ -74,7 +74,14 @@ export default function HomePage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            <Link
+              href="/asistente"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-gradient-to-r from-purple-500/15 to-indigo-500/15 hover:from-purple-500/25 hover:to-indigo-500/25 text-purple-300 border border-purple-500/30 transition shadow-sm"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+              <span>Asistente IA</span>
+            </Link>
+            <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               .NET 10 & Next.js 16
             </span>
@@ -98,6 +105,13 @@ export default function HomePage() {
             >
               <Sparkles className="w-4 h-4" />
               <span>Abrir Daily Hub ("Hoy")</span>
+            </Link>
+            <Link
+              href="/asistente"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple-950/60 hover:bg-purple-900/60 text-purple-200 hover:text-white border border-purple-800/60 text-sm font-medium transition shadow-lg shadow-purple-950/30"
+            >
+              <Sparkles className="w-4 h-4 text-purple-400" />
+              <span>Asistente IA</span>
             </Link>
             <Link
               href="/notas"

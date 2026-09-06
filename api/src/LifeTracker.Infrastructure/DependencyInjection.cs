@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using LifeTracker.Application.Academics.Services;
+using LifeTracker.Application.Ai.Services;
 using LifeTracker.Application.Common.Interfaces;
 using LifeTracker.Application.Habits.Services;
 using LifeTracker.Application.Health.Services;
@@ -43,6 +44,7 @@ public static class DependencyInjection
         // Storage & AI
         services.AddSingleton<IStorageService, CloudflareR2StorageService>();
         services.AddHttpClient<IAiExtractorService, GeminiAiExtractorService>();
+        services.AddHttpClient<IGeminiClient, GeminiClient>();
 
         // Domain Services & Deep Modules
         services.AddSingleton<IStreakCalculator, StreakCalculator>();
@@ -64,6 +66,8 @@ public static class DependencyInjection
         services.AddScoped<INoteService, NoteService>();
         services.AddScoped<IWorkService, WorkService>();
         services.AddScoped<IAcademicService, AcademicService>();
+        services.AddScoped<IAiToolDispatcher, AiToolDispatcher>();
+        services.AddScoped<IAiAssistantService, AiAssistantService>();
 
         return services;
     }

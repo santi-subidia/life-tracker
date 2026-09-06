@@ -439,6 +439,53 @@ export interface AssignGradePayload {
 }
 
 // ==============================================================================
+// AI ASSISTANT (GOOGLE GEMINI 2.5 FLASH & HOLISTIC ORCHESTRATION)
+// ==============================================================================
+
+export interface AiConversation {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  messageCount: number;
+}
+
+export interface AiMessage {
+  id: string;
+  role: "user" | "model" | "tool_call" | "tool_result" | "system" | string;
+  content: string;
+  toolCallsJson?: string;
+  toolResultsJson?: string;
+  createdAt: string;
+}
+
+export interface AiConversationDetail {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  messages: AiMessage[];
+}
+
+export interface AiChatTurnResult {
+  conversationId: string;
+  title: string;
+  newMessages: AiMessage[];
+}
+
+export interface CreateAiConversationPayload {
+  title?: string;
+}
+
+export interface SendAiMessagePayload {
+  message: string;
+}
+
+export interface UpdateAiConversationTitlePayload {
+  title: string;
+}
+
+// ==============================================================================
 // API CLIENT IMPLEMENTATION
 // ==============================================================================
 
@@ -1004,6 +1051,76 @@ export class LifeTrackerApiClient {
     });
     if (!res.ok) throw new Error("Error al obtener las métricas académicas.");
     return res.json();
+  }
+
+  // --- AI ASSISTANT (GEMINI 2.5 FLASH) ---
+
+  static async getAiConversations(token?: string): Promise<AiConversation[]> {
+    const res = await fetch(`${API_BASE_URL}/api/ai/conversations`, {
+      headers: this.getHeaders(token),
+    });
+    if (!res.ok) throw new Error("Error al obtener las conversaciones del asistente IA.");
+    return res.json();
+  }
+
+  static async getAiConversation(id: string, token?: string): Promise<AiConversationDetail> {
+    const res = await fetch(`${API_BASE_URL}/api/ai/conversations/${id}`, {
+      headers: this.getHeaders(token),
+    });
+    if (!res.ok) throw new Error("Error al obtener el detalle de la conversación.");
+    return res.json();
+  }
+
+  static async createAiConversation(payload?: CreateAiConversationPayload, token?: string): Promise<AiConversation> {
+    const res = await fetch(`${API_BASE_URL}/api/ai/conversations`, {
+      method: "POST",
+      headers: {
+        ...this.getHeaders(token),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload || {}),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Error al crear la conversación con el asistente IA.");
+    }
+    return res.json();
+  }
+
+  static async sendAiMessage(conversationId: string, payload: SendAiMessagePayload, token?: string): Promise<AiChatTurnResult> {
+    const res = await fetch(`${API_BASE_URL}/api/ai/conversations/${conversationId}/messages`, {
+      method: "POST",
+      headers: {
+        ...this.getHeaders(token),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Error al enviar el mensaje al asistente IA.");
+    }
+    return res.json();
+  }
+
+  static async updateAiConversationTitle(id: string, payload: UpdateAiConversationTitlePayload, token?: string): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/api/ai/conversations/${id}/title`, {
+      method: "PATCH",
+      headers: {
+        ...this.getHeaders(token),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error("Error al actualizar el título de la conversación.");
+  }
+
+  static async deleteAiConversation(id: string, token?: string): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/api/ai/conversations/${id}`, {
+      method: "DELETE",
+      headers: this.getHeaders(token),
+    });
+    if (!res.ok) throw new Error("Error al eliminar la conversación.");
   }
 }
 

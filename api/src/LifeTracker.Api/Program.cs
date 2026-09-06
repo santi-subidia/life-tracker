@@ -84,5 +84,6 @@ app.MapDailyHubEndpoints();
 app.MapNoteEndpoints();
 app.MapWorkEndpoints();
 app.MapAcademicEndpoints();
+app.MapAiEndpoints();
 
 app.Run();

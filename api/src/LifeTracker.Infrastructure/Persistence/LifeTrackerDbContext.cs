@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using LifeTracker.Application.Common.Interfaces;
 using LifeTracker.Domain.Academics;
+using LifeTracker.Domain.Ai;
 using LifeTracker.Domain.Habits;
 using LifeTracker.Domain.Health;
 using LifeTracker.Domain.Notes;
@@ -29,6 +30,8 @@ public class LifeTrackerDbContext : DbContext, ILifeTrackerDbContext
     public DbSet<WorkSession> WorkSessions => Set<WorkSession>();
     public DbSet<AcademicSubject> AcademicSubjects => Set<AcademicSubject>();
     public DbSet<AcademicMilestone> AcademicMilestones => Set<AcademicMilestone>();
+    public DbSet<AiConversation> AiConversations => Set<AiConversation>();
+    public DbSet<AiMessage> AiMessages => Set<AiMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

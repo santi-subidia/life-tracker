@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\LifeTracker.Domain\LifeTracker.Domain.csproj" />
+    <ProjectReference Include="..\..\src\LifeTracker.Application\LifeTracker.Application.csproj" />
   </ItemGroup>
 
 </Project>
