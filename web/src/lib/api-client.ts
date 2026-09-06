@@ -139,12 +139,30 @@ export interface TodayTimelineItem {
   summary?: string;
 }
 
+export interface WorkSummary {
+  completedTasksToday: number;
+  focusMinutesToday: number;
+}
+
+export interface UpcomingExam {
+  milestoneId: string;
+  subjectId: string;
+  subjectName: string;
+  subjectColor?: string;
+  milestoneTitle: string;
+  milestoneType: string;
+  dueDate: string;
+  daysRemaining: number;
+}
+
 export interface DailyHubData {
   date: string;
   dailyLog?: DailyLog;
   habits: TodayHabitItem[];
   completionPercentage: number;
   todayTimeline: TodayTimelineItem[];
+  workSummary?: WorkSummary;
+  upcomingExams?: UpcomingExam[];
 }
 
 // ==============================================================================
@@ -232,6 +250,192 @@ export interface NoteAutocompleteItem {
   slug: string;
   title: string;
   tags: string[];
+}
+
+// ==============================================================================
+// WORK & DEEP WORK (TABLERO KANBAN & SESIONES)
+// ==============================================================================
+
+export interface WorkProject {
+  id: string;
+  name: string;
+  description?: string;
+  status: "active" | "archived" | "completed" | string;
+  color?: string;
+  activeTasksCount: number;
+  completedTasksCount: number;
+  createdAt: string;
+}
+
+export interface WorkTask {
+  id: string;
+  projectId?: string;
+  projectName?: string;
+  projectColor?: string;
+  title: string;
+  description?: string;
+  status: "backlog" | "todo" | "in_progress" | "done" | string;
+  priority: "low" | "medium" | "high" | "urgent" | string;
+  dueDate?: string;
+  position: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WorkSession {
+  id: string;
+  projectId?: string;
+  projectName?: string;
+  taskId?: string;
+  taskTitle?: string;
+  startedAt: string;
+  endedAt?: string;
+  durationMinutes: number;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface WorkMetrics {
+  focusMinutesThisWeek: number;
+  focusMinutesToday: number;
+  completedTasksThisWeek: number;
+  completedTasksToday: number;
+  sessionsCountThisWeek: number;
+}
+
+export interface CreateWorkProjectPayload {
+  name: string;
+  description?: string;
+  status?: string;
+  color?: string;
+}
+
+export interface UpdateWorkProjectPayload {
+  name: string;
+  description?: string;
+  status: string;
+  color?: string;
+}
+
+export interface CreateWorkTaskPayload {
+  projectId?: string;
+  title: string;
+  description?: string;
+  status?: string;
+  priority?: string;
+  dueDate?: string;
+}
+
+export interface UpdateWorkTaskPayload {
+  projectId?: string;
+  title: string;
+  description?: string;
+  priority: string;
+  dueDate?: string;
+}
+
+export interface MoveWorkTaskPayload {
+  newStatus: string;
+  newPosition: number;
+}
+
+export interface RecordWorkSessionPayload {
+  projectId?: string;
+  taskId?: string;
+  startedAt: string;
+  endedAt: string;
+  notes?: string;
+}
+
+// ==============================================================================
+// ACADEMICS (MATERIAS, HITOS EVALUATIVOS & CALIFICACIONES)
+// ==============================================================================
+
+export interface AcademicSubject {
+  id: string;
+  name: string;
+  code?: string;
+  term: string;
+  professor?: string;
+  status: "en_curso" | "aprobada" | "regularizada" | "recursar" | string;
+  color?: string;
+  average?: number;
+  totalMilestones: number;
+  completedMilestones: number;
+}
+
+export interface AcademicMilestone {
+  id: string;
+  subjectId: string;
+  title: string;
+  milestoneType: "parcial" | "final" | "entrega" | "recuperatorio" | string;
+  dueDate: string;
+  grade?: number;
+  weightPercentage?: number;
+  status: "pendiente" | "calificado" | "vencido" | string;
+  replacesMilestoneId?: string;
+  notes?: string;
+}
+
+export interface AcademicSubjectDetail {
+  id: string;
+  name: string;
+  code?: string;
+  term: string;
+  professor?: string;
+  status: string;
+  color?: string;
+  average?: number;
+  milestones: AcademicMilestone[];
+}
+
+export interface AcademicMetrics {
+  careerAverage?: number;
+  approvedSubjectsCount: number;
+  inProgressSubjectsCount: number;
+  upcomingExamsCount: number;
+}
+
+export interface CreateAcademicSubjectPayload {
+  name: string;
+  code?: string;
+  term: string;
+  professor?: string;
+  status?: string;
+  color?: string;
+}
+
+export interface UpdateAcademicSubjectPayload {
+  name: string;
+  code?: string;
+  term: string;
+  professor?: string;
+  status: string;
+  color?: string;
+}
+
+export interface CreateAcademicMilestonePayload {
+  subjectId: string;
+  title: string;
+  milestoneType: string;
+  dueDate: string;
+  weightPercentage?: number;
+  replacesMilestoneId?: string;
+  notes?: string;
+}
+
+export interface UpdateAcademicMilestonePayload {
+  title: string;
+  milestoneType: string;
+  dueDate: string;
+  weightPercentage?: number;
+  replacesMilestoneId?: string;
+  notes?: string;
+}
+
+export interface AssignGradePayload {
+  grade: number;
+  notes?: string;
 }
 
 // ==============================================================================
@@ -521,6 +725,284 @@ export class LifeTrackerApiClient {
     });
 
     if (!res.ok) throw new Error("Error al consultar sugerencias de notas.");
+    return res.json();
+  }
+
+  // --- WORK & DEEP WORK ---
+
+  static async getProjects(token?: string): Promise<WorkProject[]> {
+    const res = await fetch(`${API_BASE_URL}/api/work/projects`, {
+      headers: this.getHeaders(token),
+    });
+    if (!res.ok) throw new Error("Error al obtener los proyectos de trabajo.");
+    return res.json();
+  }
+
+  static async createProject(payload: CreateWorkProjectPayload, token?: string): Promise<WorkProject> {
+    const res = await fetch(`${API_BASE_URL}/api/work/projects`, {
+      method: "POST",
+      headers: {
+        ...this.getHeaders(token),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Error al crear el proyecto.");
+    }
+    return res.json();
+  }
+
+  static async updateProject(id: string, payload: UpdateWorkProjectPayload, token?: string): Promise<WorkProject> {
+    const res = await fetch(`${API_BASE_URL}/api/work/projects/${id}`, {
+      method: "PUT",
+      headers: {
+        ...this.getHeaders(token),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Error al actualizar el proyecto.");
+    }
+    return res.json();
+  }
+
+  static async deleteProject(id: string, token?: string): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/api/work/projects/${id}`, {
+      method: "DELETE",
+      headers: this.getHeaders(token),
+    });
+    if (!res.ok) throw new Error("Error al eliminar el proyecto.");
+  }
+
+  static async getTasks(projectId?: string, status?: string, token?: string): Promise<WorkTask[]> {
+    const url = new URL(`${API_BASE_URL}/api/work/tasks`);
+    if (projectId) url.searchParams.set("projectId", projectId);
+    if (status) url.searchParams.set("status", status);
+
+    const res = await fetch(url.toString(), {
+      headers: this.getHeaders(token),
+    });
+    if (!res.ok) throw new Error("Error al obtener las tareas de trabajo.");
+    return res.json();
+  }
+
+  static async createTask(payload: CreateWorkTaskPayload, token?: string): Promise<WorkTask> {
+    const res = await fetch(`${API_BASE_URL}/api/work/tasks`, {
+      method: "POST",
+      headers: {
+        ...this.getHeaders(token),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Error al crear la tarea.");
+    }
+    return res.json();
+  }
+
+  static async updateTask(id: string, payload: UpdateWorkTaskPayload, token?: string): Promise<WorkTask> {
+    const res = await fetch(`${API_BASE_URL}/api/work/tasks/${id}`, {
+      method: "PUT",
+      headers: {
+        ...this.getHeaders(token),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Error al actualizar la tarea.");
+    }
+    return res.json();
+  }
+
+  static async moveTask(id: string, payload: MoveWorkTaskPayload, token?: string): Promise<WorkTask> {
+    const res = await fetch(`${API_BASE_URL}/api/work/tasks/${id}/move`, {
+      method: "PATCH",
+      headers: {
+        ...this.getHeaders(token),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Error al mover la tarea.");
+    }
+    return res.json();
+  }
+
+  static async deleteTask(id: string, token?: string): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/api/work/tasks/${id}`, {
+      method: "DELETE",
+      headers: this.getHeaders(token),
+    });
+    if (!res.ok) throw new Error("Error al eliminar la tarea.");
+  }
+
+  static async recordWorkSession(payload: RecordWorkSessionPayload, token?: string): Promise<WorkSession> {
+    const res = await fetch(`${API_BASE_URL}/api/work/sessions`, {
+      method: "POST",
+      headers: {
+        ...this.getHeaders(token),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Error al registrar la sesión de Deep Work.");
+    }
+    return res.json();
+  }
+
+  static async getWorkSessions(limit = 20, token?: string): Promise<WorkSession[]> {
+    const url = new URL(`${API_BASE_URL}/api/work/sessions`);
+    if (limit) url.searchParams.set("limit", limit.toString());
+
+    const res = await fetch(url.toString(), {
+      headers: this.getHeaders(token),
+    });
+    if (!res.ok) throw new Error("Error al obtener las sesiones de Deep Work.");
+    return res.json();
+  }
+
+  static async getWorkMetrics(token?: string): Promise<WorkMetrics> {
+    const res = await fetch(`${API_BASE_URL}/api/work/metrics`, {
+      headers: this.getHeaders(token),
+    });
+    if (!res.ok) throw new Error("Error al consultar las métricas de trabajo.");
+    return res.json();
+  }
+
+  // --- ACADEMICS ---
+
+  static async getSubjects(term?: string, token?: string): Promise<AcademicSubject[]> {
+    const url = new URL(`${API_BASE_URL}/api/academics/subjects`);
+    if (term) url.searchParams.set("term", term);
+
+    const res = await fetch(url.toString(), {
+      headers: this.getHeaders(token),
+    });
+    if (!res.ok) throw new Error("Error al obtener las materias académicas.");
+    return res.json();
+  }
+
+  static async getSubjectDetail(id: string, token?: string): Promise<AcademicSubjectDetail> {
+    const res = await fetch(`${API_BASE_URL}/api/academics/subjects/${id}`, {
+      headers: this.getHeaders(token),
+    });
+    if (!res.ok) throw new Error("Error al obtener el detalle de la materia.");
+    return res.json();
+  }
+
+  static async createSubject(payload: CreateAcademicSubjectPayload, token?: string): Promise<AcademicSubject> {
+    const res = await fetch(`${API_BASE_URL}/api/academics/subjects`, {
+      method: "POST",
+      headers: {
+        ...this.getHeaders(token),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Error al registrar la materia.");
+    }
+    return res.json();
+  }
+
+  static async updateSubject(id: string, payload: UpdateAcademicSubjectPayload, token?: string): Promise<AcademicSubject> {
+    const res = await fetch(`${API_BASE_URL}/api/academics/subjects/${id}`, {
+      method: "PUT",
+      headers: {
+        ...this.getHeaders(token),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Error al actualizar la materia.");
+    }
+    return res.json();
+  }
+
+  static async deleteSubject(id: string, token?: string): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/api/academics/subjects/${id}`, {
+      method: "DELETE",
+      headers: this.getHeaders(token),
+    });
+    if (!res.ok) throw new Error("Error al eliminar la materia.");
+  }
+
+  static async createMilestone(payload: CreateAcademicMilestonePayload, token?: string): Promise<AcademicMilestone> {
+    const res = await fetch(`${API_BASE_URL}/api/academics/milestones`, {
+      method: "POST",
+      headers: {
+        ...this.getHeaders(token),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Error al crear el hito evaluativo.");
+    }
+    return res.json();
+  }
+
+  static async updateMilestone(id: string, payload: UpdateAcademicMilestonePayload, token?: string): Promise<AcademicMilestone> {
+    const res = await fetch(`${API_BASE_URL}/api/academics/milestones/${id}`, {
+      method: "PUT",
+      headers: {
+        ...this.getHeaders(token),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Error al actualizar el hito evaluativo.");
+    }
+    return res.json();
+  }
+
+  static async assignGrade(id: string, payload: AssignGradePayload, token?: string): Promise<AcademicMilestone> {
+    const res = await fetch(`${API_BASE_URL}/api/academics/milestones/${id}/grade`, {
+      method: "PATCH",
+      headers: {
+        ...this.getHeaders(token),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Error al asignar la calificación.");
+    }
+    return res.json();
+  }
+
+  static async deleteMilestone(id: string, token?: string): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/api/academics/milestones/${id}`, {
+      method: "DELETE",
+      headers: this.getHeaders(token),
+    });
+    if (!res.ok) throw new Error("Error al eliminar el hito evaluativo.");
+  }
+
+  static async getAcademicMetrics(token?: string): Promise<AcademicMetrics> {
+    const res = await fetch(`${API_BASE_URL}/api/academics/metrics`, {
+      headers: this.getHeaders(token),
+    });
+    if (!res.ok) throw new Error("Error al obtener las métricas académicas.");
     return res.json();
   }
 }

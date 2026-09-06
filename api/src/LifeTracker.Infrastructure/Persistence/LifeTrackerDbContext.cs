@@ -1,9 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using LifeTracker.Application.Common.Interfaces;
+using LifeTracker.Domain.Academics;
 using LifeTracker.Domain.Habits;
 using LifeTracker.Domain.Health;
 using LifeTracker.Domain.Notes;
 using LifeTracker.Domain.Timeline;
+using LifeTracker.Domain.Work;
 
 namespace LifeTracker.Infrastructure.Persistence;
 
@@ -22,6 +24,11 @@ public class LifeTrackerDbContext : DbContext, ILifeTrackerDbContext
     public DbSet<HabitLog> HabitLogs => Set<HabitLog>();
     public DbSet<Note> Notes => Set<Note>();
     public DbSet<NoteLink> NoteLinks => Set<NoteLink>();
+    public DbSet<WorkProject> WorkProjects => Set<WorkProject>();
+    public DbSet<WorkTask> WorkTasks => Set<WorkTask>();
+    public DbSet<WorkSession> WorkSessions => Set<WorkSession>();
+    public DbSet<AcademicSubject> AcademicSubjects => Set<AcademicSubject>();
+    public DbSet<AcademicMilestone> AcademicMilestones => Set<AcademicMilestone>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

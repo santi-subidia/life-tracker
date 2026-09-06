@@ -1,8 +1,10 @@
 using Microsoft.EntityFrameworkCore;
+using LifeTracker.Domain.Academics;
 using LifeTracker.Domain.Habits;
 using LifeTracker.Domain.Health;
 using LifeTracker.Domain.Notes;
 using LifeTracker.Domain.Timeline;
+using LifeTracker.Domain.Work;
 
 namespace LifeTracker.Application.Common.Interfaces;
 
@@ -16,6 +18,11 @@ public interface ILifeTrackerDbContext
     DbSet<HabitLog> HabitLogs { get; }
     DbSet<Note> Notes { get; }
     DbSet<NoteLink> NoteLinks { get; }
+    DbSet<WorkProject> WorkProjects { get; }
+    DbSet<WorkTask> WorkTasks { get; }
+    DbSet<WorkSession> WorkSessions { get; }
+    DbSet<AcademicSubject> AcademicSubjects { get; }
+    DbSet<AcademicMilestone> AcademicMilestones { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

@@ -82,5 +82,7 @@ app.MapHealthEndpoints();
 app.MapHabitEndpoints();
 app.MapDailyHubEndpoints();
 app.MapNoteEndpoints();
+app.MapWorkEndpoints();
+app.MapAcademicEndpoints();
 
 app.Run();

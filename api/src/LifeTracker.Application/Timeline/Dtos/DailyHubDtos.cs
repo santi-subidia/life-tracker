@@ -37,10 +37,25 @@ public record TodayTimelineItemDto(
     string? Summary
 );
 
+public record WorkSummaryDto(int CompletedTasksToday, int FocusMinutesToday);
+
+public record UpcomingExamDto(
+    Guid MilestoneId,
+    Guid SubjectId,
+    string SubjectName,
+    string? SubjectColor,
+    string MilestoneTitle,
+    string MilestoneType,
+    DateOnly DueDate,
+    int DaysRemaining
+);
+
 public record DailyHubDto(
     DateOnly Date,
     DailyLogDto? DailyLog,
     List<TodayHabitItemDto> Habits,
     int CompletionPercentage,
-    List<TodayTimelineItemDto> TodayTimeline
+    List<TodayTimelineItemDto> TodayTimeline,
+    WorkSummaryDto? WorkSummary = null,
+    List<UpcomingExamDto>? UpcomingExams = null
 );

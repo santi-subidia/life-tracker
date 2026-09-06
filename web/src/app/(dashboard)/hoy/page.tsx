@@ -14,7 +14,10 @@ import {
   Calendar,
   CheckCircle2,
   TrendingUp,
-  Activity
+  Activity,
+  Briefcase,
+  GraduationCap,
+  ArrowRight
 } from "lucide-react";
 import { 
   LifeTrackerApiClient, 
@@ -81,7 +84,23 @@ export default function DailyHubPage() {
             title: "Hábito completado: Caminata al aire libre",
             summary: "Racha de 5 días consecutivos",
           }
-        ]
+        ],
+        workSummary: {
+          completedTasksToday: 2,
+          focusMinutesToday: 50,
+        },
+        upcomingExams: [
+          {
+            milestoneId: "demo-m1",
+            subjectId: "demo-s1",
+            subjectName: "Algoritmos y Estructuras de Datos",
+            subjectColor: "indigo",
+            milestoneTitle: "Segundo Parcial Teórico-Práctico",
+            milestoneType: "parcial",
+            dueDate: new Date(Date.now() + 86400000 * 3).toISOString().split("T")[0],
+            daysRemaining: 3,
+          },
+        ],
       }));
 
       setHubData(data);
@@ -339,6 +358,133 @@ export default function DailyHubPage() {
               ))}
             </div>
           )}
+        </section>
+
+        {/* Widgets Grid: Productividad Hoy (Deep Work) & Exámenes Próximos */}
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* WorkFocusWidget */}
+          <div className="p-5 rounded-2xl bg-neutral-900/60 border border-neutral-800/80 space-y-4 flex flex-col justify-between">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xs font-semibold text-neutral-300 uppercase tracking-wider flex items-center gap-2">
+                  <Briefcase className="w-4 h-4 text-amber-400" />
+                  Productividad & Foco Hoy
+                </h2>
+                <Link
+                  href="/trabajo"
+                  className="text-xs text-amber-400 hover:text-amber-300 transition flex items-center gap-1 font-medium"
+                >
+                  <span>Ir a Tablero</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                <div className="p-3.5 rounded-xl bg-neutral-950/80 border border-neutral-800/80">
+                  <div className="flex items-center gap-1.5 text-xs text-neutral-400 mb-1">
+                    <Clock className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Minutos de Foco</span>
+                  </div>
+                  <div className="text-2xl font-bold text-white font-mono">
+                    {hubData?.workSummary?.focusMinutesToday ?? 0}m
+                  </div>
+                  <span className="text-[10px] text-neutral-500">Sesiones Deep Work</span>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-neutral-950/80 border border-neutral-800/80">
+                  <div className="flex items-center gap-1.5 text-xs text-neutral-400 mb-1">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Tareas Hechas</span>
+                  </div>
+                  <div className="text-2xl font-bold text-white font-mono">
+                    {hubData?.workSummary?.completedTasksToday ?? 0}
+                  </div>
+                  <span className="text-[10px] text-neutral-500">Completadas hoy</span>
+                </div>
+              </div>
+            </div>
+
+            <Link
+              href="/trabajo"
+              className="w-full py-2 px-3 rounded-xl bg-neutral-950 hover:bg-neutral-800/80 border border-neutral-800 text-xs text-neutral-300 hover:text-white flex items-center justify-center gap-2 transition"
+            >
+              <Zap className="w-3.5 h-3.5 text-amber-400" />
+              <span>Iniciar sesión de foco en Deep Work</span>
+            </Link>
+          </div>
+
+          {/* UpcomingExamsWidget */}
+          <div className="p-5 rounded-2xl bg-neutral-900/60 border border-neutral-800/80 space-y-4 flex flex-col justify-between">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xs font-semibold text-neutral-300 uppercase tracking-wider flex items-center gap-2">
+                  <GraduationCap className="w-4 h-4 text-sky-400" />
+                  Próximos Exámenes (7 días)
+                </h2>
+                <Link
+                  href="/academia"
+                  className="text-xs text-sky-400 hover:text-sky-300 transition flex items-center gap-1 font-medium"
+                >
+                  <span>Ver Academia</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+
+              {(!hubData?.upcomingExams || hubData.upcomingExams.length === 0) ? (
+                <div className="p-4 rounded-xl bg-neutral-950/60 border border-dashed border-neutral-800 text-center text-xs text-neutral-500">
+                  No tienes exámenes programados para los próximos 7 días.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {hubData.upcomingExams.map((exam) => (
+                    <div
+                      key={exam.milestoneId}
+                      className="p-2.5 rounded-xl bg-neutral-950/80 border border-neutral-800/80 flex items-center justify-between gap-3 text-xs"
+                    >
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-semibold text-neutral-200 truncate">
+                            {exam.subjectName}
+                          </span>
+                          <span className="px-1.5 py-0.5 rounded text-[10px] bg-neutral-800 text-neutral-400 capitalize">
+                            {exam.milestoneType}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-neutral-400 truncate mt-0.5">
+                          {exam.milestoneTitle}
+                        </p>
+                      </div>
+
+                      {/* Days remaining badge */}
+                      <span
+                        className={`px-2 py-1 rounded-lg text-[10px] font-bold shrink-0 border ${
+                          exam.daysRemaining === 0
+                            ? "bg-rose-500/15 text-rose-400 border-rose-500/30 animate-pulse"
+                            : exam.daysRemaining === 1
+                            ? "bg-amber-500/15 text-amber-400 border-amber-500/30"
+                            : "bg-sky-500/15 text-sky-300 border-sky-500/30"
+                        }`}
+                      >
+                        {exam.daysRemaining === 0
+                          ? "¡Hoy!"
+                          : exam.daysRemaining === 1
+                          ? "Mañana"
+                          : `En ${exam.daysRemaining} días`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <Link
+              href="/academia"
+              className="w-full py-2 px-3 rounded-xl bg-neutral-950 hover:bg-neutral-800/80 border border-neutral-800 text-xs text-neutral-300 hover:text-white flex items-center justify-center gap-2 transition"
+            >
+              <Calendar className="w-3.5 h-3.5 text-sky-400" />
+              <span>Ver calendario completo de materias</span>
+            </Link>
+          </div>
         </section>
 
         {/* Timeline Cronológico de Hoy */}

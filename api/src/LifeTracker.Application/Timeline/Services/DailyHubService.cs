@@ -76,12 +76,60 @@ public class DailyHubService : IDailyHubService
             t.Summary
         )).ToList();
 
+        // 5. Resumen de Trabajo de hoy
+        var nowUtc = DateTime.UtcNow;
+        var startOfTodayUtc = new DateTime(nowUtc.Year, nowUtc.Month, nowUtc.Day, 0, 0, 0, DateTimeKind.Utc);
+        var endOfTodayUtc = startOfTodayUtc.AddDays(1).AddTicks(-1);
+
+        var completedTasksToday = await _dbContext.WorkTasks
+            .AsNoTracking()
+            .CountAsync(t => t.UserId == userId && t.Status == LifeTracker.Domain.Work.WorkTaskStatus.Done && t.UpdatedAt >= startOfTodayUtc && t.UpdatedAt <= endOfTodayUtc, cancellationToken);
+
+        var focusMinutesToday = await _dbContext.WorkSessions
+            .AsNoTracking()
+            .Where(s => s.UserId == userId && s.StartedAt >= startOfTodayUtc && s.StartedAt <= endOfTodayUtc)
+            .SumAsync(s => s.DurationMinutes, cancellationToken);
+
+        var workSummary = new WorkSummaryDto(completedTasksToday, focusMinutesToday);
+
+        // 6. Exámenes e hitos académicos próximos (hoy a 7 días)
+        var nextWeek = today.AddDays(7);
+        var upcomingMilestones = await _dbContext.AcademicMilestones
+            .AsNoTracking()
+            .Where(m => m.UserId == userId && m.Status == LifeTracker.Domain.Academics.MilestoneStatus.Pendiente && m.DueDate >= today && m.DueDate <= nextWeek)
+            .OrderBy(m => m.DueDate)
+            .ToListAsync(cancellationToken);
+
+        var subjectIds = upcomingMilestones.Select(m => m.SubjectId).Distinct().ToList();
+        var subjects = await _dbContext.AcademicSubjects
+            .AsNoTracking()
+            .Where(s => subjectIds.Contains(s.Id))
+            .ToDictionaryAsync(s => s.Id, cancellationToken);
+
+        var upcomingExams = upcomingMilestones.Select(m =>
+        {
+            subjects.TryGetValue(m.SubjectId, out var sub);
+            int daysRemaining = m.DueDate.DayNumber - today.DayNumber;
+            return new UpcomingExamDto(
+                m.Id,
+                m.SubjectId,
+                sub?.Name ?? "Materia",
+                sub?.Color,
+                m.Title,
+                m.MilestoneType.ToString().ToLowerInvariant(),
+                m.DueDate,
+                daysRemaining
+            );
+        }).ToList();
+
         return new DailyHubDto(
             today,
             dailyLog == null ? null : MapToDto(dailyLog),
             habitItems,
             percentage,
-            timelineDtos
+            timelineDtos,
+            workSummary,
+            upcomingExams
         );
     }
 
