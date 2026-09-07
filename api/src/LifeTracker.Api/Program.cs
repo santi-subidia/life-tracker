@@ -1,8 +1,11 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using LifeTracker.Api.Endpoints;
 using LifeTracker.Infrastructure;
+
+LoadDotEnv();
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -86,4 +89,53 @@ app.MapWorkEndpoints();
 app.MapAcademicEndpoints();
 app.MapAiEndpoints();
 
+// Aplicar migraciones pendientes de EF Core automáticamente en la base de datos
+using (var scope = app.Services.CreateScope())
+{
+    try
+    {
+        var db = scope.ServiceProvider.GetRequiredService<LifeTracker.Infrastructure.Persistence.LifeTrackerDbContext>();
+        db.Database.Migrate();
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogWarning(ex, "No se pudieron aplicar migraciones automáticas de EF Core en el arranque.");
+    }
+}
+
 app.Run();
+
+static void LoadDotEnv()
+{
+    var current = new DirectoryInfo(Directory.GetCurrentDirectory());
+    FileInfo? envFile = null;
+    while (current != null)
+    {
+        var candidate = Path.Combine(current.FullName, ".env");
+        if (File.Exists(candidate))
+        {
+            envFile = new FileInfo(candidate);
+            break;
+        }
+        current = current.Parent;
+    }
+
+    if (envFile != null && envFile.Exists)
+    {
+        foreach (var line in File.ReadAllLines(envFile.FullName))
+        {
+            var trimmed = line.Trim();
+            if (string.IsNullOrWhiteSpace(trimmed) || trimmed.StartsWith("#") || !trimmed.Contains('='))
+                continue;
+
+            var parts = trimmed.Split('=', 2);
+            var key = parts[0].Trim();
+            var value = parts[1].Trim().Trim('"', '\'');
+
+            if (!string.IsNullOrEmpty(key) && string.IsNullOrEmpty(Environment.GetEnvironmentVariable(key)))
+            {
+                Environment.SetEnvironmentVariable(key, value);
+            }
+        }
+    }
+}

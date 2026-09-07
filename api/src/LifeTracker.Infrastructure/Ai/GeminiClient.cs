@@ -46,18 +46,32 @@ public class GeminiClient : IGeminiClient
             var systemInstruction = GeminiPromptComposer.ComposeSystemInstruction();
             var payload = BuildGeminiPayload(systemInstruction, conversationHistory, availableTools);
 
-            var endpoint = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={apiKey}";
-            var response = await _httpClient.PostAsJsonAsync(endpoint, payload, cancellationToken);
+            var candidateModels = new[] { "gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-2.5-flash" };
+            JsonDocument? doc = null;
 
-            if (!response.IsSuccessStatusCode)
+            foreach (var model in candidateModels)
             {
-                var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
-                _logger.LogWarning("Fallo en llamada a Google Gemini ({StatusCode}): {Error}. Activando fallback mock.", response.StatusCode, errorBody);
-                return GenerateSmartMockResponse(conversationHistory);
+                var endpoint = $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}";
+                var response = await _httpClient.PostAsJsonAsync(endpoint, payload, cancellationToken);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    doc = await response.Content.ReadFromJsonAsync<JsonDocument>(cancellationToken: cancellationToken);
+                    if (doc != null) break;
+                }
+                else
+                {
+                    var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                    _logger.LogWarning("Fallo en Gemini modelo {Model} ({StatusCode}): {Error}. Probando siguiente modelo...", model, response.StatusCode, errorBody);
+                }
             }
 
-            var doc = await response.Content.ReadFromJsonAsync<JsonDocument>(cancellationToken: cancellationToken);
-            return ParseGeminiResponse(doc);
+            if (doc != null)
+            {
+                return ParseGeminiResponse(doc);
+            }
+
+            return GenerateSmartMockResponse(conversationHistory);
         }
         catch (Exception ex)
         {

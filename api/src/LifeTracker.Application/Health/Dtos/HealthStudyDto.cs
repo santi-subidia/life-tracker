@@ -10,6 +10,15 @@ public record HealthClinicalValueDto(
     bool IsAbnormal
 );
 
+public record DuplicateStudySummaryDto(
+    Guid Id,
+    string StudyType,
+    DateOnly StudyDate,
+    string? Institution,
+    string FileUrl,
+    DateTime CreatedAt
+);
+
 public record HealthStudyDto(
     Guid Id,
     Guid UserId,
@@ -18,6 +27,7 @@ public record HealthStudyDto(
     string FileUrl,
     string? Institution,
     string? Summary,
+    string? FileHash,
     DateTime CreatedAt,
     List<HealthClinicalValueDto> ClinicalValues
 );

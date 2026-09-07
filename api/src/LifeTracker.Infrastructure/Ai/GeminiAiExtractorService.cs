@@ -27,9 +27,10 @@ Debes extraer:
   * Valor o resultado obtenido: DEBES incluir los resultados obtenidos por el paciente, tanto numéricos (ej: '1.025', '95.5') como cualitativos (ej: 'No contiene', 'Ambar', 'Positivo', 'Negativo').
   * Unidad de medida (si tiene, ej: 'mg/dL', 'g/L', o déjalo vacío si no aplica).
   * Categoría clínica o sección (ej: 'Química Clínica', 'Hematología', 'Sedimento').
+  * is_abnormal: Booleano (true o false). EVALÚA el valor del paciente contra los valores o intervalos de referencia indicados en el propio documento para ese análisis (o si el laboratorio lo resalta con asterisco '*', 'Alto', 'Bajo', 'H', 'L', negrita o fuera de rango). Si el valor cae fuera del rango normal del laboratorio, pon true. Si está dentro del rango normal o no hay indicación de anomalía, pon false.
 
 REGLAS CRÍTICAS DE EXCLUSIÓN (TAXATIVAS):
-1. EXCLUYE taxativamente tablas de valores de referencia / intervalos normales (ej: 'Hasta 30 ug/mg', '70 a 110 mg/dL').
+1. No extraigas las tablas de valores de referencia como métricas del paciente (ej: no crees una métrica llamada 'Hasta 30 ug/mg' o '70 a 110 mg/dL'). Úsalas únicamente para comparar y determinar si is_abnormal es true o false.
 2. EXCLUYE criterios diagnósticos y clasificaciones de riesgo (ej: 'Criterios ADA', estadios KDIGO).
 3. EXCLUYE recomendaciones médicas y notas metodológicas al pie del estudio.
 4. ÚNICAMENTE extrae el resultado que corresponde a la muestra del paciente.";
@@ -84,7 +85,7 @@ REGLAS CRÍTICAS DE EXCLUSIÓN (TAXATIVAS):
                         },
                         new
                         {
-                            text = "Extrae los datos de este estudio médico a partir del documento adjunto."
+                            text = "Extrae los datos de este estudio médico a partir del documento adjunto. Responde estrictamente con formato JSON válido con la estructura: {\"study_type\": \"...\", \"study_date\": \"YYYY-MM-DD\", \"institution\": \"...\", \"clinical_values\": [{\"metric_name\": \"...\", \"value\": \"...\", \"unit\": \"...\", \"category\": \"...\", \"is_abnormal\": true|false}]}"
                         }
                     }
                 }
@@ -92,58 +93,105 @@ REGLAS CRÍTICAS DE EXCLUSIÓN (TAXATIVAS):
             generationConfig = new
             {
                 response_mime_type = "application/json",
-                response_schema = new
-                {
-                    type = "OBJECT",
-                    properties = new
-                    {
-                        study_type = new { type = "STRING", description = "Tipo de estudio" },
-                        study_date = new { type = "STRING", description = "Fecha en formato YYYY-MM-DD" },
-                        institution = new { type = "STRING", description = "Institución o laboratorio" },
-                        clinical_values = new
-                        {
-                            type = "ARRAY",
-                            description = "Valores clínicos obtenidos",
-                            items = new
-                            {
-                                type = "OBJECT",
-                                properties = new
-                                {
-                                    metric_name = new { type = "STRING" },
-                                    value = new { type = "STRING" },
-                                    unit = new { type = "STRING" },
-                                    category = new { type = "STRING" }
-                                },
-                                required = new[] { "metric_name", "value" }
-                            }
-                        }
-                    },
-                    required = new[] { "study_type", "study_date", "clinical_values" }
-                }
+                temperature = 0.1
             }
         };
 
-        var url = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={apiKey}";
+        var candidateModels = new[] { "gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-2.5-flash" };
+        string? rawText = null;
+        string lastError = string.Empty;
 
-        var response = await _httpClient.PostAsJsonAsync(url, requestPayload, cancellationToken);
-
-        if (!response.IsSuccessStatusCode)
+        foreach (var model in candidateModels)
         {
-            var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
-            _logger.LogError("Error de la API de Google Gemini: {StatusCode} - {Content}", response.StatusCode, errorContent);
-            throw new InvalidOperationException($"Error al invocar Gemini 2.5 Flash: {response.StatusCode}. Detalle: {errorContent}");
-        }
+            var url = $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}";
+            
+            for (int attempt = 1; attempt <= 2; attempt++)
+            {
+                try
+                {
+                    _logger.LogInformation("Llamando a Gemini con modelo {Model} (intento {Attempt})...", model, attempt);
+                    var response = await _httpClient.PostAsJsonAsync(url, requestPayload, cancellationToken);
 
-        var responseJson = await response.Content.ReadFromJsonAsync<GeminiApiResponse>(cancellationToken: cancellationToken);
-        var rawText = responseJson?.Candidates?.FirstOrDefault()?.Content?.Parts?.FirstOrDefault()?.Text;
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var responseJson = await response.Content.ReadFromJsonAsync<GeminiApiResponse>(cancellationToken: cancellationToken);
+                        rawText = responseJson?.Candidates?.FirstOrDefault()?.Content?.Parts?.FirstOrDefault()?.Text;
+                        if (!string.IsNullOrWhiteSpace(rawText))
+                        {
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        lastError = await response.Content.ReadAsStringAsync(cancellationToken);
+                        _logger.LogWarning("Modelo {Model} respondió con {StatusCode}: {Content}. Reintentando...", model, response.StatusCode, lastError);
+                        
+                        // Si es 503 o 429, esperar un momento antes de reintentar
+                        if ((int)response.StatusCode == 503 || (int)response.StatusCode == 429)
+                        {
+                            await Task.Delay(1500, cancellationToken);
+                        }
+                        else
+                        {
+                            break; // Pasar al siguiente modelo
+                        }
+                    }
+                }
+                catch (Exception ex) when (attempt < 2)
+                {
+                    _logger.LogWarning(ex, "Excepción de red llamando a {Model}. Reintentando...", model);
+                    await Task.Delay(1000, cancellationToken);
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(rawText))
+            {
+                break;
+            }
+        }
 
         if (string.IsNullOrWhiteSpace(rawText))
         {
-            throw new InvalidOperationException("La respuesta de Gemini 2.5 Flash estuvo vacía.");
+            throw new InvalidOperationException($"No se pudo obtener respuesta de Google Gemini. Último detalle: {lastError}");
         }
 
+        // Limpiar bloques de código markdown si estuvieran presentes (```json ... ```)
+        rawText = rawText.Trim();
+        if (rawText.StartsWith("```json", StringComparison.OrdinalIgnoreCase))
+        {
+            rawText = rawText[7..];
+        }
+        else if (rawText.StartsWith("```"))
+        {
+            rawText = rawText[3..];
+        }
+
+        if (rawText.EndsWith("```"))
+        {
+            rawText = rawText[..^3];
+        }
+        rawText = rawText.Trim();
+
         var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-        var extractedRaw = JsonSerializer.Deserialize<GeminiExtractedRaw>(rawText, options);
+        GeminiExtractedRaw? extractedRaw = null;
+
+        try
+        {
+            if (rawText.StartsWith("["))
+            {
+                var list = JsonSerializer.Deserialize<List<GeminiExtractedRaw>>(rawText, options);
+                extractedRaw = list?.FirstOrDefault();
+            }
+            else
+            {
+                extractedRaw = JsonSerializer.Deserialize<GeminiExtractedRaw>(rawText, options);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al deserializar respuesta de Gemini: {Raw}", rawText);
+            throw new InvalidOperationException($"Error al interpretar JSON devuelto por Gemini: {ex.Message}. Respuesta: {rawText[..Math.Min(200, rawText.Length)]}");
+        }
 
         if (extractedRaw is null)
         {
@@ -151,7 +199,7 @@ REGLAS CRÍTICAS DE EXCLUSIÓN (TAXATIVAS):
         }
 
         var values = (extractedRaw.ClinicalValues ?? [])
-            .Select(v => new ExtractedClinicalValueDto(v.MetricName, v.Value, v.Unit, v.Category, false))
+            .Select(v => new ExtractedClinicalValueDto(v.MetricName, v.Value, v.Unit, v.Category, v.IsAbnormal))
             .ToList();
 
         return new ExtractedStudyDto(
@@ -234,5 +282,8 @@ REGLAS CRÍTICAS DE EXCLUSIÓN (TAXATIVAS):
 
         [JsonPropertyName("category")]
         public string? Category { get; set; }
+
+        [JsonPropertyName("is_abnormal")]
+        public bool IsAbnormal { get; set; }
     }
 }

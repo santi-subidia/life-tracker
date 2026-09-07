@@ -14,5 +14,7 @@ public record SaveHealthStudyRequest(
     string FileUrl,
     string? Institution,
     string? Summary,
-    List<SaveClinicalValueItem> ClinicalValues
+    List<SaveClinicalValueItem> ClinicalValues,
+    string? FileHash = null,
+    Guid? ReplaceStudyId = null
 );

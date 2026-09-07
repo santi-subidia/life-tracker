@@ -34,6 +34,17 @@ public interface IHealthService
         string metricName,
         CancellationToken cancellationToken = default);
 
+    Task<DuplicateStudySummaryDto?> FindExactDuplicateByHashAsync(
+        Guid userId,
+        string fileHash,
+        CancellationToken cancellationToken = default);
+
+    Task<DuplicateStudySummaryDto?> FindSemanticDuplicateAsync(
+        Guid userId,
+        string studyType,
+        DateOnly studyDate,
+        CancellationToken cancellationToken = default);
+
     Task<List<string>> GetAvailableMetricsAsync(
         Guid userId,
         CancellationToken cancellationToken = default);

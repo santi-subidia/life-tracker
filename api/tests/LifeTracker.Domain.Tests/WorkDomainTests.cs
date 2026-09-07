@@ -110,8 +110,9 @@ public class WorkDomainTests
             new DateTime(2026, 8, 25, 11, 0, 0, DateTimeKind.Utc)); // Semana pasada
 
         var taskDoneToday = new WorkTask(userId, "Tarea Hoy", status: WorkTaskStatus.Done);
-        // Simular UpdatedAt hoy
+        // Simular UpdatedAt hoy (6 de sept)
         taskDoneToday.MoveTo(WorkTaskStatus.Done, 0);
+        typeof(WorkTask).GetProperty("UpdatedAt")!.SetValue(taskDoneToday, new DateTime(2026, 9, 6, 12, 0, 0, DateTimeKind.Utc));
 
         var taskDoneWednesday = new WorkTask(userId, "Tarea Miércoles", status: WorkTaskStatus.Done);
         taskDoneWednesday.MoveTo(WorkTaskStatus.Done, 1);

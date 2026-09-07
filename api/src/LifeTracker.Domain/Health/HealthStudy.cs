@@ -10,6 +10,7 @@ public class HealthStudy : BaseEntity
     public string FileUrl { get; private set; } = string.Empty;
     public string? Institution { get; private set; }
     public string? Summary { get; private set; }
+    public string? FileHash { get; private set; }
 
     private readonly List<HealthClinicalValue> _clinicalValues = [];
     public IReadOnlyCollection<HealthClinicalValue> ClinicalValues => _clinicalValues.AsReadOnly();
@@ -23,7 +24,8 @@ public class HealthStudy : BaseEntity
         DateOnly studyDate,
         string fileUrl,
         string? institution = null,
-        string? summary = null)
+        string? summary = null,
+        string? fileHash = null)
     {
         if (userId == Guid.Empty)
             throw new ArgumentException("El ID de usuario no puede ser vacío.", nameof(userId));
@@ -40,6 +42,7 @@ public class HealthStudy : BaseEntity
         FileUrl = fileUrl.Trim();
         Institution = string.IsNullOrWhiteSpace(institution) ? null : institution.Trim();
         Summary = string.IsNullOrWhiteSpace(summary) ? null : summary.Trim();
+        FileHash = string.IsNullOrWhiteSpace(fileHash) ? null : fileHash.Trim().ToLowerInvariant();
     }
 
     public HealthClinicalValue AddClinicalValue(
@@ -63,5 +66,10 @@ public class HealthStudy : BaseEntity
         StudyDate = studyDate;
         Institution = string.IsNullOrWhiteSpace(institution) ? null : institution.Trim();
         Summary = string.IsNullOrWhiteSpace(summary) ? null : summary.Trim();
+    }
+
+    public void UpdateFileHash(string fileHash)
+    {
+        FileHash = string.IsNullOrWhiteSpace(fileHash) ? null : fileHash.Trim().ToLowerInvariant();
     }
 }

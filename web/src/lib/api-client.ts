@@ -12,9 +12,21 @@ export interface ExtractedClinicalValue {
   isAbnormal: boolean;
 }
 
+export interface DuplicateStudySummary {
+  id: string;
+  studyType: string;
+  studyDate: string;
+  institution?: string;
+  fileUrl: string;
+  createdAt: string;
+}
+
 export interface ExtractedStudyResult {
   fileUrl: string;
   fileName: string;
+  fileHash?: string;
+  duplicateStatus?: "NONE" | "EXACT_FILE" | "POSSIBLE_DUPLICATE";
+  existingStudy?: DuplicateStudySummary;
   studyType: string;
   studyDate: string;
   institution?: string;
@@ -27,6 +39,7 @@ export interface HealthStudy {
   studyType: string;
   studyDate: string;
   fileUrl: string;
+  fileHash?: string;
   institution?: string;
   summary?: string;
   createdAt: string;
@@ -500,11 +513,12 @@ export class LifeTrackerApiClient {
 
   // --- HEALTH ---
 
-  static async extractStudy(file: File, token?: string): Promise<ExtractedStudyResult> {
+  static async extractStudy(file: File, force?: boolean, token?: string): Promise<ExtractedStudyResult> {
     const formData = new FormData();
     formData.append("file", file);
 
-    const res = await fetch(`${API_BASE_URL}/api/health/extract`, {
+    const url = force ? `${API_BASE_URL}/api/health/extract?force=true` : `${API_BASE_URL}/api/health/extract`;
+    const res = await fetch(url, {
       method: "POST",
       headers: this.getHeaders(token),
       body: formData,
@@ -524,6 +538,8 @@ export class LifeTrackerApiClient {
     fileUrl: string;
     institution?: string;
     summary?: string;
+    fileHash?: string;
+    replaceStudyId?: string;
     clinicalValues: Array<{
       metricName: string;
       value: string;
@@ -561,6 +577,15 @@ export class LifeTrackerApiClient {
     return res.json();
   }
 
+  static async getStudy(studyId: string, token?: string): Promise<HealthStudy> {
+    const res = await fetch(`${API_BASE_URL}/api/health/studies/${studyId}`, {
+      headers: this.getHeaders(token),
+    });
+
+    if (!res.ok) throw new Error("Error al obtener el estudio médico.");
+    return res.json();
+  }
+
   static async compareMetric(metricName: string, token?: string): Promise<MetricComparison> {
     const url = new URL(`${API_BASE_URL}/api/health/metrics/compare`);
     url.searchParams.set("name", metricName);
@@ -580,6 +605,22 @@ export class LifeTrackerApiClient {
 
     if (!res.ok) throw new Error("Error al obtener las métricas disponibles.");
     return res.json();
+  }
+
+  static getStudyFileUrl(studyId: string): string {
+    return `${API_BASE_URL}/api/health/studies/${studyId}/file`;
+  }
+
+  static async deleteStudy(studyId: string, token?: string): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/api/health/studies/${studyId}`, {
+      method: "DELETE",
+      headers: this.getHeaders(token),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Error al eliminar el estudio médico.");
+    }
   }
 
   // --- HABITS ---

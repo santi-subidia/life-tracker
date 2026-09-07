@@ -44,13 +44,32 @@ public class HealthService : IHealthService
         if (userId == Guid.Empty)
             throw new ArgumentException("El ID de usuario no puede ser vacío.", nameof(userId));
 
+        // Si se solicitó reemplazar un estudio previo
+        if (request.ReplaceStudyId.HasValue && request.ReplaceStudyId.Value != Guid.Empty)
+        {
+            var existingToReplace = await _dbContext.HealthStudies
+                .Include(s => s.ClinicalValues)
+                .FirstOrDefaultAsync(s => s.Id == request.ReplaceStudyId.Value && s.UserId == userId, cancellationToken);
+
+            if (existingToReplace != null)
+            {
+                _dbContext.HealthStudies.Remove(existingToReplace);
+                var oldTimeline = await _dbContext.TimelineItems
+                    .Where(t => t.UserId == userId && t.SourceId == existingToReplace.Id)
+                    .ToListAsync(cancellationToken);
+                _dbContext.TimelineItems.RemoveRange(oldTimeline);
+                _logger.LogInformation("Reemplazando estudio previo ID {OldStudyId} con nueva versión", existingToReplace.Id);
+            }
+        }
+
         var study = new HealthStudy(
             userId,
             request.StudyType,
             request.StudyDate,
             request.FileUrl,
             request.Institution,
-            request.Summary
+            request.Summary,
+            request.FileHash
         );
 
         foreach (var val in request.ClinicalValues)
@@ -200,6 +219,71 @@ public class HealthService : IHealthService
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<DuplicateStudySummaryDto?> FindExactDuplicateByHashAsync(
+        Guid userId,
+        string fileHash,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(fileHash))
+            return null;
+
+        var normalizedHash = fileHash.Trim().ToLowerInvariant();
+
+        return await _dbContext.HealthStudies
+            .AsNoTracking()
+            .Where(s => s.UserId == userId && s.FileHash == normalizedHash)
+            .OrderByDescending(s => s.CreatedAt)
+            .Select(s => new DuplicateStudySummaryDto(
+                s.Id,
+                s.StudyType,
+                s.StudyDate,
+                s.Institution,
+                s.FileUrl,
+                s.CreatedAt
+            ))
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<DuplicateStudySummaryDto?> FindSemanticDuplicateAsync(
+        Guid userId,
+        string studyType,
+        DateOnly studyDate,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(studyType))
+            return null;
+
+        var normalizedType = studyType.Trim().ToLowerInvariant();
+
+        // Rango de coincidencia de fecha: +/- 1 día
+        var fromDate = studyDate.AddDays(-1);
+        var toDate = studyDate.AddDays(1);
+
+        var candidates = await _dbContext.HealthStudies
+            .AsNoTracking()
+            .Where(s => s.UserId == userId && s.StudyDate >= fromDate && s.StudyDate <= toDate)
+            .OrderByDescending(s => s.CreatedAt)
+            .ToListAsync(cancellationToken);
+
+        var match = candidates.FirstOrDefault(s => 
+            s.StudyType.Trim().Equals(studyType.Trim(), StringComparison.OrdinalIgnoreCase) ||
+            s.StudyType.ToLowerInvariant().Contains(normalizedType) ||
+            normalizedType.Contains(s.StudyType.ToLowerInvariant())
+        );
+
+        if (match == null)
+            return null;
+
+        return new DuplicateStudySummaryDto(
+            match.Id,
+            match.StudyType,
+            match.StudyDate,
+            match.Institution,
+            match.FileUrl,
+            match.CreatedAt
+        );
+    }
+
     private static HealthStudyDto MapToDto(HealthStudy study)
     {
         return new HealthStudyDto(
@@ -210,6 +294,7 @@ public class HealthService : IHealthService
             study.FileUrl,
             study.Institution,
             study.Summary,
+            study.FileHash,
             study.CreatedAt,
             study.ClinicalValues.Select(v => new HealthClinicalValueDto(
                 v.Id,

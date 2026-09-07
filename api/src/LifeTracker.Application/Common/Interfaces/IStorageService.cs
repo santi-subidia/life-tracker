@@ -12,4 +12,8 @@ public interface IStorageService
     Task<string> GetDownloadUrlAsync(
         string fileKey,
         CancellationToken cancellationToken = default);
+
+    Task<(Stream Stream, string ContentType)?> GetFileStreamAsync(
+        string fileKey,
+        CancellationToken cancellationToken = default);
 }

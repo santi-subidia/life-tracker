@@ -250,6 +250,8 @@ public class AiToolDispatcherTests
         public Task<HealthStudyDto> SaveStudyAsync(Guid userId, SaveHealthStudyRequest request, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<bool> DeleteStudyAsync(Guid userId, Guid studyId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<ExtractedStudyDto> ExtractStudyDataAsync(Stream fileStream, string mimeType, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<DuplicateStudySummaryDto?> FindExactDuplicateByHashAsync(Guid userId, string fileHash, CancellationToken cancellationToken = default) => Task.FromResult<DuplicateStudySummaryDto?>(null);
+        public Task<DuplicateStudySummaryDto?> FindSemanticDuplicateAsync(Guid userId, string studyType, DateOnly studyDate, CancellationToken cancellationToken = default) => Task.FromResult<DuplicateStudySummaryDto?>(null);
         public Task<List<string>> GetAvailableMetricsAsync(Guid userId, CancellationToken cancellationToken = default) => Task.FromResult(new List<string>());
     }
 

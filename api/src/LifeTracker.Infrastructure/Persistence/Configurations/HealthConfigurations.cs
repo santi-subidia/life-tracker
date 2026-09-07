@@ -18,7 +18,11 @@ public class HealthStudyConfiguration : IEntityTypeConfiguration<HealthStudy>
         builder.Property(s => s.FileUrl).HasColumnName("file_url").IsRequired();
         builder.Property(s => s.Institution).HasColumnName("institution");
         builder.Property(s => s.Summary).HasColumnName("summary");
+        builder.Property(s => s.FileHash).HasColumnName("file_hash");
         builder.Property(s => s.CreatedAt).HasColumnName("created_at");
+
+        builder.HasIndex(s => new { s.UserId, s.FileHash })
+            .HasDatabaseName("ix_health_studies_user_hash");
 
         builder.HasMany(s => s.ClinicalValues)
             .WithOne(v => v.Study)
