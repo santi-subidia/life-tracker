@@ -452,6 +452,153 @@ export interface AssignGradePayload {
 }
 
 // ==============================================================================
+// CAREER PLANS & PREREQUISITES (MALLA CURRICULAR Y MOTOR DAG)
+// ==============================================================================
+
+export interface ExtractedPrerequisiteDraft {
+  requiredSubjectCode: string;
+  requirementType: "requiere_regularizada" | "requiere_aprobada" | string;
+}
+
+export interface ExtractedSubjectDraft {
+  tempId: string;
+  code?: string;
+  name: string;
+  yearLevel: number;
+  periodNumber: number;
+  credits?: number;
+  isOptional: boolean;
+  prerequisites: ExtractedPrerequisiteDraft[];
+}
+
+export interface CareerPlanDraft {
+  suggestedPlanName: string;
+  suggestedUniversity?: string;
+  totalCredits?: number;
+  subjects: ExtractedSubjectDraft[];
+  extractionConfidence: number;
+  warnings: string[];
+}
+
+export interface CurriculumPrerequisiteItem {
+  prerequisiteId: string;
+  requiredSubjectId: string;
+  requiredSubjectCode?: string;
+  requiredSubjectName: string;
+  requirementType: "requiere_regularizada" | "requiere_aprobada" | string;
+  isSatisfied: boolean;
+}
+
+export interface CurriculumSubjectItem {
+  id: string;
+  code?: string;
+  name: string;
+  yearLevel: number;
+  periodNumber: number;
+  credits?: number;
+  isOptional: boolean;
+  orderIndex: number;
+  status: "bloqueada" | "habilitada" | "en_curso" | "regularizada" | "aprobada" | string;
+  linkedAcademicSubjectId?: string;
+  prerequisites: CurriculumPrerequisiteItem[];
+}
+
+export interface CareerPlanDetail {
+  id: string;
+  name: string;
+  university?: string;
+  totalSubjects: number;
+  totalCredits?: number;
+  isActive: boolean;
+  progressPercentage: number;
+  subjects: CurriculumSubjectItem[];
+}
+
+export interface CareerPlanSummary {
+  id: string;
+  name: string;
+  university?: string;
+  totalSubjects: number;
+  totalCredits?: number;
+  isActive: boolean;
+  approvedSubjectsCount: number;
+  regularizedSubjectsCount: number;
+  inProgressSubjectsCount: number;
+  progressPercentage: number;
+  createdAt: string;
+}
+
+export interface SubjectRecommendation {
+  subjectId: string;
+  code?: string;
+  name: string;
+  yearLevel: number;
+  periodNumber: number;
+  priorityScore: number;
+  criticalPathDepth: number;
+  unlockedFutureSubjectsCount: number;
+  recommendationBadge: string;
+  justification: string;
+}
+
+export interface MissingPrerequisiteInfo {
+  requiredSubjectId: string;
+  requiredSubjectCode: string;
+  requiredSubjectName: string;
+  requirementType: string;
+  currentStatus?: string;
+}
+
+export interface BlockedSubjectEligibility {
+  subjectId: string;
+  subjectCode?: string;
+  subjectName: string;
+  yearLevel: number;
+  periodNumber: number;
+  status: string;
+  missingPrerequisites: MissingPrerequisiteInfo[];
+}
+
+export interface CareerRecommendationResult {
+  careerPlanId: string;
+  totalEligibleSubjects: number;
+  suggestedQuota: number;
+  recommendations: SubjectRecommendation[];
+  otherEligibleSubjects: SubjectRecommendation[];
+  blockedSubjects: BlockedSubjectEligibility[];
+}
+
+export interface CreateCurriculumPrerequisitePayload {
+  requiredCodeOrTempId: string;
+  requirementType: "requiere_regularizada" | "requiere_aprobada" | string;
+}
+
+export interface CreateCurriculumSubjectPayload {
+  tempId?: string;
+  code?: string;
+  name: string;
+  yearLevel: number;
+  periodNumber: number;
+  credits?: number;
+  isOptional?: boolean;
+  orderIndex?: number;
+  prerequisites: CreateCurriculumPrerequisitePayload[];
+}
+
+export interface CreateCareerPlanPayload {
+  name: string;
+  university?: string;
+  totalCredits?: number;
+  isActive?: boolean;
+  subjects: CreateCurriculumSubjectPayload[];
+}
+
+export interface EnrollSuggestedSubjectsPayload {
+  term: string;
+  curriculumSubjectIds: string[];
+}
+
+// ==============================================================================
 // AI ASSISTANT (GOOGLE GEMINI 2.5 FLASH & HOLISTIC ORCHESTRATION)
 // ==============================================================================
 
@@ -1329,6 +1476,149 @@ export class LifeTrackerApiClient {
     });
     if (!res.ok) throw new Error("Error al obtener las métricas académicas.");
     return res.json();
+  }
+
+  // --- CAREER PLANS & CURRICULUM PREREQUISITES ---
+
+  static async extractCareerPlan(file: File, token?: string): Promise<CareerPlanDraft> {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const res = await fetch(`${API_BASE_URL}/api/academics/career-plans/extract`, {
+      method: "POST",
+      headers: this.getHeaders(token),
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Error al extraer la malla curricular con IA.");
+    }
+
+    return res.json();
+  }
+
+  static async extractCareerPlanDraft(file: File, token?: string): Promise<CareerPlanDraft> {
+    return this.extractCareerPlan(file, token);
+  }
+
+  static async createCareerPlan(payload: CreateCareerPlanPayload, token?: string): Promise<CareerPlanDetail> {
+    const res = await fetch(`${API_BASE_URL}/api/academics/career-plans`, {
+      method: "POST",
+      headers: {
+        ...this.getHeaders(token),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Error al crear el plan de carrera.");
+    }
+
+    return res.json();
+  }
+
+  static async getCareerPlans(token?: string): Promise<CareerPlanSummary[]> {
+    const res = await fetch(`${API_BASE_URL}/api/academics/career-plans`, {
+      headers: this.getHeaders(token),
+    });
+
+    if (!res.ok) throw new Error("Error al obtener los planes de carrera.");
+    return res.json();
+  }
+
+  static async getActiveCareerPlan(token?: string): Promise<CareerPlanDetail | null> {
+    const res = await fetch(`${API_BASE_URL}/api/academics/career-plans/active`, {
+      headers: this.getHeaders(token),
+    });
+
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error("Error al obtener el plan de carrera activo.");
+    return res.json();
+  }
+
+  static async getCareerPlanDetail(id: string, token?: string): Promise<CareerPlanDetail> {
+    const res = await fetch(`${API_BASE_URL}/api/academics/career-plans/${id}`, {
+      headers: this.getHeaders(token),
+    });
+
+    if (!res.ok) throw new Error("Error al obtener el detalle del plan de carrera.");
+    return res.json();
+  }
+
+  static async setActiveCareerPlan(id: string, token?: string): Promise<{ success: boolean; activePlanId: string }> {
+    const res = await fetch(`${API_BASE_URL}/api/academics/career-plans/${id}/set-active`, {
+      method: "PATCH",
+      headers: this.getHeaders(token),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Error al activar el plan de carrera.");
+    }
+
+    return { success: true, activePlanId: id };
+  }
+
+  static async getCareerPlanRecommendations(
+    id: string,
+    quota?: number,
+    token?: string
+  ): Promise<CareerRecommendationResult> {
+    const query = quota ? `?quota=${quota}` : "";
+    const res = await fetch(`${API_BASE_URL}/api/academics/career-plans/${id}/recommendations${query}`, {
+      headers: this.getHeaders(token),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Error al obtener las recomendaciones de cursada.");
+    }
+
+    return res.json();
+  }
+
+  static async enrollSuggestedSubjects(
+    id: string,
+    payload: EnrollSuggestedSubjectsPayload,
+    token?: string
+  ): Promise<{ enrolledCount: number; term: string }> {
+    const res = await fetch(`${API_BASE_URL}/api/academics/career-plans/${id}/enroll-suggested`, {
+      method: "POST",
+      headers: {
+        ...this.getHeaders(token),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Error al inscribir las materias sugeridas.");
+    }
+
+    const data = await res.json().catch(() => null);
+    const enrolledCount = Array.isArray(data)
+      ? data.length
+      : typeof data?.enrolledCount === "number"
+      ? data.enrolledCount
+      : payload.curriculumSubjectIds.length;
+
+    return { enrolledCount, term: payload.term };
+  }
+
+  static async deleteCareerPlan(id: string, token?: string): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/api/academics/career-plans/${id}`, {
+      method: "DELETE",
+      headers: this.getHeaders(token),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Error al eliminar el plan de carrera.");
+    }
   }
 
   // --- AI ASSISTANT (GEMINI 2.5 FLASH) ---

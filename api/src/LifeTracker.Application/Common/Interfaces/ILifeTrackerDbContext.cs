@@ -26,6 +26,9 @@ public interface ILifeTrackerDbContext
     DbSet<WorkSession> WorkSessions { get; }
     DbSet<AcademicSubject> AcademicSubjects { get; }
     DbSet<AcademicMilestone> AcademicMilestones { get; }
+    DbSet<CareerPlan> CareerPlans { get; }
+    DbSet<CurriculumSubject> CurriculumSubjects { get; }
+    DbSet<CurriculumPrerequisite> CurriculumPrerequisites { get; }
     DbSet<AiConversation> AiConversations { get; }
     DbSet<AiMessage> AiMessages { get; }
     DbSet<FinancialAccount> FinancialAccounts { get; }

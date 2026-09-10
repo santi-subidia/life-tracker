@@ -12,7 +12,8 @@ import {
   Award, 
   Calendar,
   Sparkles,
-  ChevronRight
+  ChevronRight,
+  Network
 } from "lucide-react";
 import { 
   LifeTrackerApiClient, 
@@ -32,6 +33,7 @@ import { MilestonesList } from "@/components/academics/MilestonesList";
 import { MilestoneGradeModal } from "@/components/academics/MilestoneGradeModal";
 import { CreateSubjectModal } from "@/components/academics/CreateSubjectModal";
 import { CreateMilestoneModal } from "@/components/academics/CreateMilestoneModal";
+import { CareerPlanDashboard } from "@/components/academics/plan/CareerPlanDashboard";
 
 // Fallback demo data for static prerendering / offline preview
 const DEMO_SUBJECTS: AcademicSubject[] = [
@@ -146,6 +148,7 @@ const DEMO_METRICS: AcademicMetrics = {
 };
 
 export default function AcademicsPage() {
+  const [mainTab, setMainTab] = useState<"cursadas" | "plan">("cursadas");
   const [subjects, setSubjects] = useState<AcademicSubject[]>([]);
   const [milestones, setMilestones] = useState<AcademicMilestone[]>([]);
   const [metrics, setMetrics] = useState<AcademicMetrics | null>(null);
@@ -400,96 +403,163 @@ export default function AcademicsPage() {
         </div>
       </header>
 
+      {/* Top Tab Bar Navigation */}
+      <div className="border-b border-neutral-800 bg-neutral-900/60 backdrop-blur-md sticky top-16 z-30 px-4 sm:px-6">
+        <div className="max-w-7xl mx-auto flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setMainTab("cursadas")}
+            className={`px-4 py-3 text-xs font-semibold border-b-2 transition flex items-center gap-2 ${
+              mainTab === "cursadas"
+                ? "border-sky-500 text-sky-400 bg-neutral-900/40"
+                : "border-transparent text-neutral-400 hover:text-white"
+            }`}
+          >
+            <BookOpen className="w-4 h-4" />
+            <span>Cursadas del Cuatrimestre</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setMainTab("plan")}
+            className={`px-4 py-3 text-xs font-semibold border-b-2 transition flex items-center gap-2 ${
+              mainTab === "plan"
+                ? "border-sky-500 text-sky-400 bg-neutral-900/40"
+                : "border-transparent text-neutral-400 hover:text-white"
+            }`}
+          >
+            <Network className="w-4 h-4 text-purple-400" />
+            <span>Plan de Carrera & Correlatividades</span>
+            <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/20">
+              DAG / IA
+            </span>
+          </button>
+        </div>
+      </div>
+
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 space-y-6">
-        {/* Career Summary Card */}
-        <CareerSummaryCard metrics={metrics} loading={loading} />
-
-        {/* Filter Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-neutral-900/60 border border-neutral-800/80 rounded-2xl">
-          <div className="flex items-center gap-2.5">
-            <div className="p-1.5 rounded-lg bg-neutral-800 text-neutral-400">
-              <Filter className="w-4 h-4" />
-            </div>
-            <span className="text-xs font-medium text-neutral-400">Filtrar por período:</span>
-            <select
-              value={selectedTerm}
-              onChange={(e) => setSelectedTerm(e.target.value)}
-              className="px-3 py-1.5 rounded-xl bg-neutral-950 border border-neutral-800 text-neutral-200 text-xs font-medium focus:outline-none focus:border-sky-500 transition cursor-pointer"
-            >
-              <option value="">Todos los períodos ({subjects.length} materias)</option>
-              {uniqueTerms.map((t) => (
-                <option key={t} value={t}>
-                  {t} ({subjects.filter((s) => s.term === t).length})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex items-center gap-2 text-xs text-neutral-400 self-end sm:self-auto">
-            <BookOpen className="w-4 h-4 text-sky-400" />
-            <span>
-              Mostrando <strong className="text-white">{filteredSubjects.length}</strong> materias
-            </span>
-          </div>
-        </div>
-
-        {/* Subjects Grid */}
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xs font-semibold text-neutral-300 uppercase tracking-wider">
-              Materias ({filteredSubjects.length})
-            </h2>
-            <button
-              type="button"
-              onClick={() => {
-                setSubjectToEdit(null);
-                setIsSubjectModalOpen(true);
-              }}
-              className="text-xs text-sky-400 hover:text-sky-300 transition"
-            >
-              + Añadir Materia
-            </button>
-          </div>
-
-          {filteredSubjects.length === 0 ? (
-            <div className="p-12 rounded-2xl bg-neutral-900/40 border border-dashed border-neutral-800 text-center space-y-3">
-              <BookOpen className="w-8 h-8 text-neutral-600 mx-auto" />
-              <div className="space-y-1">
-                <p className="text-sm font-semibold text-neutral-300">No hay materias registradas</p>
-                <p className="text-xs text-neutral-500">
-                  Registra tus materias para hacer el seguimiento de notas y evaluaciones.
-                </p>
+        {mainTab === "plan" ? (
+          <CareerPlanDashboard onSubjectEnrolled={loadData} />
+        ) : (
+          <>
+            {/* Banner: Shortcut to Career Plan */}
+            <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-purple-950/40 via-sky-950/20 to-neutral-900/60 border border-purple-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg">
+              <div className="flex items-center gap-3.5">
+                <div className="w-10 h-10 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center shrink-0">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <span>Plan de Estudio & Malla Curricular</span>
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      Motor DAG Activo
+                    </span>
+                  </h3>
+                  <p className="text-xs text-neutral-400 mt-0.5">
+                    Visualiza el árbol de correlativas en grafo interactivo, detecta materias en camino crítico y planifica tu próximo cuatrimestre.
+                  </p>
+                </div>
               </div>
               <button
                 type="button"
-                onClick={() => {
-                  setSubjectToEdit(null);
-                  setIsSubjectModalOpen(true);
-                }}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-sky-600 hover:bg-sky-500 text-white shadow-lg shadow-sky-600/20 active:scale-95 transition"
+                onClick={() => setMainTab("plan")}
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-600/20 transition flex items-center gap-1.5 self-start sm:self-auto shrink-0"
               >
-                <Plus className="w-4 h-4" />
-                <span>Registrar mi primera materia</span>
+                <span>Explorar Plan y Grafo</span>
+                <ChevronRight className="w-4 h-4" />
               </button>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredSubjects.map((subject) => (
-                <SubjectCard
-                  key={subject.id}
-                  subject={subject}
-                  onSelect={handleSelectSubject}
-                  onEdit={(s) => {
-                    setSubjectToEdit(s);
+
+            {/* Career Summary Card */}
+            <CareerSummaryCard metrics={metrics} loading={loading} />
+
+            {/* Filter Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-neutral-900/60 border border-neutral-800/80 rounded-2xl">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 rounded-lg bg-neutral-800 text-neutral-400">
+                  <Filter className="w-4 h-4" />
+                </div>
+                <span className="text-xs font-medium text-neutral-400">Filtrar por período:</span>
+                <select
+                  value={selectedTerm}
+                  onChange={(e) => setSelectedTerm(e.target.value)}
+                  className="px-3 py-1.5 rounded-xl bg-neutral-950 border border-neutral-800 text-neutral-200 text-xs font-medium focus:outline-none focus:border-sky-500 transition cursor-pointer"
+                >
+                  <option value="">Todos los períodos ({subjects.length} materias)</option>
+                  {uniqueTerms.map((t) => (
+                    <option key={t} value={t}>
+                      {t} ({subjects.filter((s) => s.term === t).length})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2 text-xs text-neutral-400 self-end sm:self-auto">
+                <BookOpen className="w-4 h-4 text-sky-400" />
+                <span>
+                  Mostrando <strong className="text-white">{filteredSubjects.length}</strong> materias
+                </span>
+              </div>
+            </div>
+
+            {/* Subjects Grid */}
+            <section className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                  Materias ({filteredSubjects.length})
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSubjectToEdit(null);
                     setIsSubjectModalOpen(true);
                   }}
-                  onDelete={handleDeleteSubject}
-                />
-              ))}
-            </div>
-          )}
-        </section>
+                  className="text-xs text-sky-400 hover:text-sky-300 transition"
+                >
+                  + Añadir Materia
+                </button>
+              </div>
+
+              {filteredSubjects.length === 0 ? (
+                <div className="p-12 rounded-2xl bg-neutral-900/40 border border-dashed border-neutral-800 text-center space-y-3">
+                  <BookOpen className="w-8 h-8 text-neutral-600 mx-auto" />
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold text-neutral-300">No hay materias registradas</p>
+                    <p className="text-xs text-neutral-500">
+                      Registra tus materias para hacer el seguimiento de notas y evaluaciones.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSubjectToEdit(null);
+                      setIsSubjectModalOpen(true);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-sky-600 hover:bg-sky-500 text-white shadow-lg shadow-sky-600/20 active:scale-95 transition"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Registrar mi primera materia</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredSubjects.map((subject) => (
+                    <SubjectCard
+                      key={subject.id}
+                      subject={subject}
+                      onSelect={handleSelectSubject}
+                      onEdit={(s) => {
+                        setSubjectToEdit(s);
+                        setIsSubjectModalOpen(true);
+                      }}
+                      onDelete={handleDeleteSubject}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+          </>
+        )}
       </main>
 
       {/* Slide-over Drawer for Subject Detail & Milestones */}

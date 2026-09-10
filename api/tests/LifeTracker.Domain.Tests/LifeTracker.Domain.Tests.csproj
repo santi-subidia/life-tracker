@@ -21,6 +21,12 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\LifeTracker.Domain\LifeTracker.Domain.csproj" />
     <ProjectReference Include="..\..\src\LifeTracker.Application\LifeTracker.Application.csproj" />
+    <ProjectReference Include="..\..\src\LifeTracker.Infrastructure\LifeTracker.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.11" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.11" />
   </ItemGroup>
 
 </Project>

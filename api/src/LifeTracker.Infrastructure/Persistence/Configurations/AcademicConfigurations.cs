@@ -13,6 +13,7 @@ public class AcademicSubjectConfiguration : IEntityTypeConfiguration<AcademicSub
         builder.HasKey(s => s.Id);
         builder.Property(s => s.Id).HasColumnName("id");
         builder.Property(s => s.UserId).HasColumnName("user_id").IsRequired();
+        builder.Property(s => s.CurriculumSubjectId).HasColumnName("curriculum_subject_id");
         builder.Property(s => s.Name).HasColumnName("name").IsRequired();
         builder.Property(s => s.Code).HasColumnName("code");
         builder.Property(s => s.Term).HasColumnName("term").IsRequired();
@@ -27,6 +28,14 @@ public class AcademicSubjectConfiguration : IEntityTypeConfiguration<AcademicSub
                 v => FormatSubjectStatus(v),
                 v => ParseSubjectStatus(v))
             .IsRequired();
+
+        builder.HasOne<CurriculumSubject>()
+            .WithMany()
+            .HasForeignKey(s => s.CurriculumSubjectId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasIndex(s => s.CurriculumSubjectId)
+            .HasDatabaseName("idx_academic_subjects_curriculum_id");
 
         builder.HasIndex(s => new { s.UserId, s.Term });
     }

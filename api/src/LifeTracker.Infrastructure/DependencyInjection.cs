@@ -46,9 +46,11 @@ public static class DependencyInjection
         // Storage & AI
         services.AddSingleton<IStorageService, CloudflareR2StorageService>();
         services.AddHttpClient<IAiExtractorService, GeminiAiExtractorService>();
+        services.AddHttpClient<IAiCareerPlanExtractor, GeminiCareerPlanExtractorService>();
         services.AddHttpClient<IGeminiClient, GeminiClient>();
 
         // Domain Services & Deep Modules
+        services.AddSingleton<ICareerPrerequisiteEngine, CareerPrerequisiteEngine>();
         services.AddSingleton<IStreakCalculator, StreakCalculator>();
         services.AddSingleton<IWikilinkParser, WikilinkParser>();
         services.AddSingleton<IKanbanOrderingService, KanbanOrderingService>();
@@ -76,6 +78,7 @@ public static class DependencyInjection
         services.AddScoped<INoteService, NoteService>();
         services.AddScoped<IWorkService, WorkService>();
         services.AddScoped<IAcademicService, AcademicService>();
+        services.AddScoped<ICareerPlanService, CareerPlanService>();
         services.AddScoped<IFinanceService, FinanceService>();
         services.AddScoped<IFitnessService, FitnessService>();
         services.AddScoped<IAiToolDispatcher, AiToolDispatcher>();

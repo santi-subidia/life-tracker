@@ -32,6 +32,9 @@ public class LifeTrackerDbContext : DbContext, ILifeTrackerDbContext
     public DbSet<WorkSession> WorkSessions => Set<WorkSession>();
     public DbSet<AcademicSubject> AcademicSubjects => Set<AcademicSubject>();
     public DbSet<AcademicMilestone> AcademicMilestones => Set<AcademicMilestone>();
+    public DbSet<CareerPlan> CareerPlans => Set<CareerPlan>();
+    public DbSet<CurriculumSubject> CurriculumSubjects => Set<CurriculumSubject>();
+    public DbSet<CurriculumPrerequisite> CurriculumPrerequisites => Set<CurriculumPrerequisite>();
     public DbSet<AiConversation> AiConversations => Set<AiConversation>();
     public DbSet<AiMessage> AiMessages => Set<AiMessage>();
     public DbSet<FinancialAccount> FinancialAccounts => Set<FinancialAccount>();

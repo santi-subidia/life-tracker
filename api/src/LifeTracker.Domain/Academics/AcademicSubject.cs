@@ -5,6 +5,7 @@ namespace LifeTracker.Domain.Academics;
 public class AcademicSubject : BaseEntity
 {
     public Guid UserId { get; private set; }
+    public Guid? CurriculumSubjectId { get; private set; }
     public string Name { get; private set; } = string.Empty;
     public string? Code { get; private set; }
     public string Term { get; private set; } = string.Empty;
@@ -57,6 +58,12 @@ public class AcademicSubject : BaseEntity
         Professor = professor?.Trim();
         Status = status;
         Color = color?.Trim();
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void LinkCurriculumSubject(Guid? curriculumSubjectId)
+    {
+        CurriculumSubjectId = curriculumSubjectId;
         UpdatedAt = DateTime.UtcNow;
     }
 }

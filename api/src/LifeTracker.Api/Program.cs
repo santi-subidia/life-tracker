@@ -90,6 +90,7 @@ app.MapDailyHubEndpoints();
 app.MapNoteEndpoints();
 app.MapWorkEndpoints();
 app.MapAcademicEndpoints();
+app.MapCareerPlanEndpoints();
 app.MapAiEndpoints();
 app.MapProfileEndpoints();
 app.MapFinanceEndpoints();
