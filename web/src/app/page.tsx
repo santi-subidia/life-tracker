@@ -1,164 +1,785 @@
-import Link from "next/link";
-import { Activity, CheckCircle2, BookOpen, Briefcase, GraduationCap, Sparkles, ArrowRight } from "lucide-react";
+"use client";
 
-export default function HomePage() {
-  const pillars = [
-    {
-      title: "Salud & Estudios",
-      desc: "Historial médico, análisis clínicos y comparación multianual.",
-      href: "/salud",
-      icon: Activity,
-      color: "text-rose-500",
-      bg: "bg-rose-500/10",
-      border: "border-rose-500/20",
-    },
-    {
-      title: "Hábitos & Rutinas",
-      desc: "Checklist diario de 1 toque, rachas y consistencia.",
-      href: "/habitos",
-      icon: CheckCircle2,
-      color: "text-emerald-500",
-      bg: "bg-emerald-500/10",
-      border: "border-emerald-500/20",
-    },
-    {
-      title: "Segundo Cerebro",
-      desc: "Notas con enlaces bidireccionales estilo Obsidian y bitácora.",
-      href: "/notas",
-      icon: BookOpen,
-      color: "text-indigo-500",
-      bg: "bg-indigo-500/10",
-      border: "border-indigo-500/20",
-    },
-    {
-      title: "Trabajo & Foco",
-      desc: "Tablero Kanban completo, proyectos y sesiones de Deep Work.",
-      href: "/trabajo",
-      icon: Briefcase,
-      color: "text-amber-500",
-      bg: "bg-amber-500/10",
-      border: "border-amber-500/20",
-    },
-    {
-      title: "Academia",
-      desc: "Materias, fechas clave de exámenes y calificaciones.",
-      href: "/academia",
-      icon: GraduationCap,
-      color: "text-sky-500",
-      bg: "bg-sky-500/10",
-      border: "border-sky-500/20",
-    },
-    {
-      title: "Asistente IA",
-      desc: "Google Gemini 2.5 Flash con visión transversal de tu vida.",
-      href: "/asistente",
-      icon: Sparkles,
-      color: "text-purple-500",
-      bg: "bg-purple-500/10",
-      border: "border-purple-500/20",
-    },
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import {
+  Activity,
+  CheckCircle2,
+  BookOpen,
+  Briefcase,
+  GraduationCap,
+  ArrowRight,
+  Flame,
+  Smile,
+  Zap,
+  Clock,
+  Check,
+  ChevronRight,
+  Sparkles,
+  User,
+  Menu,
+  X,
+  Wallet,
+} from "lucide-react";
+import {
+  LifeTrackerApiClient,
+  type DailyHubData,
+} from "@/lib/api-client";
+
+export default function SomaDashboardPage() {
+  const [hubData, setHubData] = useState<DailyHubData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [mood, setMood] = useState<number | null>(null);
+  const [energy, setEnergy] = useState<number | null>(null);
+  const [savingCheckin, setSavingCheckin] = useState(false);
+  const [greeting, setGreeting] = useState("Buen día");
+  const [userName, setUserName] = useState("Subi");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) setGreeting("Buen día");
+    else if (hour < 20) setGreeting("Buenas tardes");
+    else setGreeting("Buenas noches");
+
+    const p = LifeTrackerApiClient.getUserProfile();
+    if (p.name) setUserName(p.name);
+
+    const handleProfileUpdate = () => {
+      const updated = LifeTrackerApiClient.getUserProfile();
+      if (updated.name) setUserName(updated.name);
+    };
+
+    window.addEventListener("user_profile_updated", handleProfileUpdate);
+    loadHubData();
+
+    return () => {
+      window.removeEventListener("user_profile_updated", handleProfileUpdate);
+    };
+  }, []);
+
+  async function loadHubData() {
+    try {
+      setLoading(true);
+      const data: DailyHubData = await LifeTrackerApiClient.getDailyHubToday().catch(() => ({
+        date: new Date().toISOString().split("T")[0],
+        dailyLog: undefined,
+        habits: [
+          {
+            id: "demo-1",
+            name: "Tomar 2L de Agua",
+            category: "salud",
+            color: "sky",
+            isCompletedToday: false,
+            currentStreak: 7,
+            longestStreak: 21,
+            frequencyDescription: "Todos los días",
+          },
+          {
+            id: "demo-2",
+            name: "Lectura Técnica (20 min)",
+            category: "estudio",
+            color: "indigo",
+            isCompletedToday: false,
+            currentStreak: 3,
+            longestStreak: 12,
+            frequencyDescription: "4 veces por semana",
+          },
+          {
+            id: "demo-3",
+            name: "Caminata al aire libre",
+            category: "salud",
+            color: "emerald",
+            isCompletedToday: true,
+            currentStreak: 5,
+            longestStreak: 14,
+            frequencyDescription: "Todos los días",
+          },
+          {
+            id: "demo-4",
+            name: "Sesión Deep Work (45m)",
+            category: "trabajo",
+            color: "amber",
+            isCompletedToday: false,
+            currentStreak: 4,
+            longestStreak: 10,
+            frequencyDescription: "Lunes a Viernes",
+          },
+        ],
+        completionPercentage: 25,
+        todayTimeline: [
+          {
+            id: "tl-1",
+            timestamp: new Date().toISOString(),
+            sourceModule: "habits",
+            eventType: "habit_completed",
+            title: "Hábito completado: Caminata al aire libre",
+            summary: "Racha de 5 días consecutivos",
+          },
+        ],
+        workSummary: {
+          completedTasksToday: 2,
+          focusMinutesToday: 50,
+        },
+        upcomingExams: [
+          {
+            milestoneId: "demo-m1",
+            subjectId: "demo-s1",
+            subjectName: "Algoritmos y Estructuras de Datos",
+            subjectColor: "indigo",
+            milestoneTitle: "Segundo Parcial Teórico-Práctico",
+            milestoneType: "parcial",
+            dueDate: new Date(Date.now() + 86400000 * 3).toISOString().split("T")[0],
+            daysRemaining: 3,
+          },
+        ],
+      }));
+
+      setHubData(data);
+      if (data.dailyLog) {
+        setMood(data.dailyLog.moodScore || null);
+        setEnergy(data.dailyLog.energyScore || null);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleToggleHabit(habitId: string) {
+    if (!hubData) return;
+
+    const updatedHabits = hubData.habits.map((h) => {
+      if (h.id === habitId) {
+        const nextState = !h.isCompletedToday;
+        return {
+          ...h,
+          isCompletedToday: nextState,
+          currentStreak: nextState ? h.currentStreak + 1 : Math.max(0, h.currentStreak - 1),
+        };
+      }
+      return h;
+    });
+
+    const completedCount = updatedHabits.filter((h) => h.isCompletedToday).length;
+    const newPercentage =
+      updatedHabits.length === 0 ? 100 : Math.round((completedCount / updatedHabits.length) * 100);
+
+    setHubData({
+      ...hubData,
+      habits: updatedHabits,
+      completionPercentage: newPercentage,
+    });
+
+    try {
+      await LifeTrackerApiClient.toggleHabit(habitId);
+      const freshData = await LifeTrackerApiClient.getDailyHubToday().catch(() => null);
+      if (freshData) setHubData(freshData);
+    } catch {
+      loadHubData();
+    }
+  }
+
+  async function handleScoreChange(newMood: number | null, newEnergy: number | null) {
+    setMood(newMood);
+    setEnergy(newEnergy);
+
+    try {
+      setSavingCheckin(true);
+      await LifeTrackerApiClient.updateDailyLogToday({
+        moodScore: newMood || undefined,
+        energyScore: newEnergy || undefined,
+      });
+    } catch {
+      // Silencioso en modo local
+    } finally {
+      setSavingCheckin(false);
+    }
+  }
+
+  const moodOptions = [
+    { score: 1, label: "Agotado", emoji: "😞" },
+    { score: 2, label: "Bajo", emoji: "🙁" },
+    { score: 3, label: "Neutro", emoji: "😐" },
+    { score: 4, label: "Bien", emoji: "🙂" },
+    { score: 5, label: "Excelente", emoji: "🤩" },
   ];
 
+  const energyOptions = [
+    { score: 1, label: "Sin pila", emoji: "🪫" },
+    { score: 2, label: "Baja", emoji: "🔋" },
+    { score: 3, label: "Media", emoji: "⚡" },
+    { score: 4, label: "Alta", emoji: "⚡⚡" },
+    { score: 5, label: "Al tope", emoji: "🚀" },
+  ];
+
+  const pillarsNav = [
+    { name: "Salud", href: "/salud", icon: Activity, accent: "hover:text-rose-400" },
+    { name: "Hábitos", href: "/habitos", icon: CheckCircle2, accent: "hover:text-emerald-400" },
+    { name: "Segundo Cerebro", href: "/notas", icon: BookOpen, accent: "hover:text-indigo-400" },
+    { name: "Trabajo & Foco", href: "/trabajo", icon: Briefcase, accent: "hover:text-amber-400" },
+    { name: "Academia", href: "/academia", icon: GraduationCap, accent: "hover:text-sky-400" },
+    { name: "Finanzas", href: "/finanzas", icon: Wallet, accent: "hover:text-emerald-400" },
+    { name: "Asistente AI", href: "/asistente", icon: Sparkles, accent: "hover:text-purple-400 font-medium" },
+  ];
+
+  const completedHabitsCount = hubData?.habits.filter((h) => h.isCompletedToday).length || 0;
+  const totalHabitsCount = hubData?.habits.length || 0;
+
   return (
-    <main className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col">
-      {/* Top bar */}
-      <header className="border-b border-neutral-800 bg-neutral-900/50 backdrop-blur-md sticky top-0 z-50">
+    <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col selection:bg-neutral-800">
+      {/* Top Navigation Bar */}
+      <header className="border-b border-neutral-800/80 bg-neutral-950/80 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+          {/* Brand Logo & Name */}
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-white shadow-lg shadow-indigo-500/20">
-              LT
-            </div>
-            <div>
-              <h1 className="font-semibold text-base leading-tight">Life Tracker</h1>
-              <p className="text-xs text-neutral-400">Personal Life OS</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link
-              href="/asistente"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-gradient-to-r from-purple-500/15 to-indigo-500/15 hover:from-purple-500/25 hover:to-indigo-500/25 text-purple-300 border border-purple-500/30 transition shadow-sm"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-              <span>Asistente IA</span>
+            <Link href="/" className="flex items-center gap-3 group">
+              <div className="w-8 h-8 rounded-xl bg-neutral-900 border border-neutral-700/80 flex items-center justify-center shadow-inner group-hover:border-neutral-500 transition-colors">
+                {/* Minimalist Geometric Glyph: SOMA */}
+                <svg
+                  className="w-4 h-4 text-neutral-200 group-hover:text-white transition-colors"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="12" cy="12" r="9" strokeWidth="2" strokeDasharray="4 2" />
+                  <path d="M12 7v10" />
+                  <path d="M8 12h8" />
+                </svg>
+              </div>
+              <div className="flex flex-col">
+                <span className="font-bold text-sm tracking-widest uppercase text-neutral-100 group-hover:text-white transition-colors">
+                  Soma
+                </span>
+                <span className="text-[10px] uppercase tracking-wider text-neutral-500 font-medium -mt-0.5">
+                  Personal OS
+                </span>
+              </div>
             </Link>
-            <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              .NET 10 & Next.js 16
-            </span>
+          </div>
+
+          {/* Module Links */}
+          <nav className="hidden md:flex items-center gap-1">
+            {pillarsNav.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium text-neutral-400 hover:bg-neutral-900/80 ${item.accent} transition flex items-center gap-1.5`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  <span>{item.name}</span>
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* Right Actions: User Profile & Mobile Menu Toggle */}
+          <div className="flex items-center gap-2 text-xs text-neutral-400">
+            <Link
+              href="/perfil"
+              className="px-2.5 py-1.5 rounded-xl bg-neutral-900/90 hover:bg-neutral-800 border border-neutral-800 text-neutral-200 hover:text-white flex items-center gap-1.5 transition text-xs font-medium shrink-0"
+              title="Ir a Perfil & Resumen"
+            >
+              <User className="w-3.5 h-3.5 text-amber-400" />
+              <span className="hidden sm:inline font-semibold">{userName}</span>
+            </Link>
+
+            {/* Mobile Hamburger Button */}
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden p-2 rounded-xl bg-neutral-900/90 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 hover:text-white transition flex items-center justify-center shrink-0"
+              aria-label={mobileMenuOpen ? "Cerrar menú de módulos" : "Abrir menú de módulos"}
+            >
+              {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile Navigation Drawer */}
+        {mobileMenuOpen && (
+          <div className="md:hidden fixed inset-x-0 top-16 bottom-0 z-50 bg-black/80 backdrop-blur-md animate-in fade-in duration-150 flex flex-col">
+            <div className="bg-neutral-950 border-b border-neutral-800 p-4 space-y-1 shadow-2xl max-h-[calc(100vh-4rem)] overflow-y-auto">
+              <div className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider px-3 pb-1">
+                Módulos del Sistema
+              </div>
+              {pillarsNav.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-3 px-3 py-3 rounded-xl text-neutral-200 hover:text-white hover:bg-neutral-900 border border-transparent hover:border-neutral-800 transition active:scale-[0.99]"
+                  >
+                    <div className="w-9 h-9 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-center shrink-0">
+                      <Icon className="w-4 h-4 text-neutral-300" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-semibold text-neutral-200">{item.name}</div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-neutral-600" />
+                  </Link>
+                );
+              })}
+
+              <div className="pt-2 border-t border-neutral-900">
+                <Link
+                  href="/perfil"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 px-3 py-3 rounded-xl text-neutral-200 hover:text-white hover:bg-neutral-900 border border-transparent hover:border-neutral-800 transition active:scale-[0.99]"
+                >
+                  <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+                    <User className="w-4 h-4 text-amber-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-neutral-200">Perfil & Resumen</div>
+                    <div className="text-xs text-neutral-500">Métricas y configuración</div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-neutral-600" />
+                </Link>
+              </div>
+            </div>
+            <div
+              className="flex-1"
+              onClick={() => setMobileMenuOpen(false)}
+            />
+          </div>
+        )}
       </header>
 
-      {/* Hero section */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 pt-12 pb-8 w-full">
-        <div className="max-w-2xl">
-          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-neutral-50 mb-3">
-            Toda tu vida en un solo lugar.
-          </h2>
-          <p className="text-neutral-400 text-sm sm:text-base leading-relaxed mb-6">
-            Plataforma personal que unifica tus métricas de salud, hábitos diarios, segundo cerebro, proyectos y formación bajo un mismo sistema inteligente.
-          </p>
-          <div className="flex flex-wrap items-center gap-3">
-            <Link
-              href="/hoy"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-neutral-950 font-bold text-sm shadow-lg shadow-emerald-500/20 transition"
-            >
-              <Sparkles className="w-4 h-4" />
-              <span>Abrir Daily Hub ("Hoy")</span>
-            </Link>
-            <Link
-              href="/asistente"
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple-950/60 hover:bg-purple-900/60 text-purple-200 hover:text-white border border-purple-800/60 text-sm font-medium transition shadow-lg shadow-purple-950/30"
-            >
-              <Sparkles className="w-4 h-4 text-purple-400" />
-              <span>Asistente IA</span>
-            </Link>
-            <Link
-              href="/notas"
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-950/60 hover:bg-indigo-900/60 text-indigo-200 hover:text-white border border-indigo-800/60 text-sm font-medium transition shadow-lg shadow-indigo-950/30"
-            >
-              <BookOpen className="w-4 h-4 text-indigo-400" />
-              <span>Segundo Cerebro</span>
-            </Link>
-            <Link
-              href="/salud"
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-neutral-800 text-sm font-medium transition"
-            >
-              <Activity className="w-4 h-4 text-rose-500" />
-              <span>Estudios Médicos</span>
-            </Link>
+      {/* Main Content Area */}
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 pt-8 pb-20 w-full flex-1 space-y-8">
+        {/* Executive Header / Greeting */}
+        <section className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-4 border-b border-neutral-800/80">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white flex items-center gap-3">
+              {greeting}, {userName}.
+            </h1>
+            <p className="text-xs sm:text-sm text-neutral-400 capitalize mt-1">
+              {new Date().toLocaleDateString("es-ES", {
+                weekday: "long",
+                day: "numeric",
+                month: "long",
+              })}{" "}
+              • Panel de Operación Diaria
+            </p>
           </div>
-        </div>
-      </section>
 
-      {/* Grid of Pillars */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-16 w-full flex-1">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {pillars.map((pillar) => {
-            const Icon = pillar.icon;
-            return (
-              <Link
-                key={pillar.href}
-                href={pillar.href}
-                className="group relative p-5 rounded-2xl bg-neutral-900/60 border border-neutral-800/80 hover:border-neutral-700 transition-all duration-200 hover:bg-neutral-900 flex flex-col justify-between"
-              >
+          {/* Pulse summary chips */}
+          <div className="flex items-center gap-2.5 flex-wrap text-xs">
+            <div className="px-3 py-1.5 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center gap-2">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="text-neutral-400">Hábitos:</span>
+              <span className="font-semibold text-neutral-200">
+                {completedHabitsCount}/{totalHabitsCount} ({hubData?.completionPercentage || 0}%)
+              </span>
+            </div>
+
+            <div className="px-3 py-1.5 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center gap-2">
+              <Clock className="w-3.5 h-3.5 text-amber-400" />
+              <span className="text-neutral-400">Foco:</span>
+              <span className="font-semibold text-neutral-200 font-mono">
+                {hubData?.workSummary?.focusMinutesToday || 0}m
+              </span>
+            </div>
+          </div>
+        </section>
+
+        {/* Check-in Diario (Ánimo & Energía) */}
+        <section className="p-5 rounded-2xl bg-neutral-900/50 border border-neutral-800/80 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-semibold text-neutral-300 uppercase tracking-wider flex items-center gap-2">
+              <Smile className="w-4 h-4 text-amber-400" />
+              Check-in de la Jornada
+            </h2>
+            {savingCheckin && (
+              <span className="text-[11px] text-neutral-500 animate-pulse">Sincronizando...</span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Ánimo */}
+            <div className="space-y-1.5">
+              <span className="text-[11px] text-neutral-400">Estado de Ánimo</span>
+              <div className="flex items-center justify-between gap-1 bg-neutral-950/80 p-1.5 rounded-xl border border-neutral-800/80">
+                {moodOptions.map((opt) => (
+                  <button
+                    key={opt.score}
+                    type="button"
+                    onClick={() => handleScoreChange(opt.score, energy)}
+                    className={`flex-1 py-1.5 rounded-lg text-sm transition flex flex-col items-center gap-0.5 ${
+                      mood === opt.score
+                        ? "bg-amber-500/20 text-amber-300 border border-amber-500/30 shadow-sm"
+                        : "text-neutral-400 hover:text-white hover:bg-neutral-900"
+                    }`}
+                  >
+                    <span className="text-base">{opt.emoji}</span>
+                    <span className="text-[9px] uppercase tracking-wider font-medium">
+                      {opt.label}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Energía */}
+            <div className="space-y-1.5">
+              <span className="text-[11px] text-neutral-400">Nivel de Energía</span>
+              <div className="flex items-center justify-between gap-1 bg-neutral-950/80 p-1.5 rounded-xl border border-neutral-800/80">
+                {energyOptions.map((opt) => (
+                  <button
+                    key={opt.score}
+                    type="button"
+                    onClick={() => handleScoreChange(mood, opt.score)}
+                    className={`flex-1 py-1.5 rounded-lg text-sm transition flex flex-col items-center gap-0.5 ${
+                      energy === opt.score
+                        ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shadow-sm"
+                        : "text-neutral-400 hover:text-white hover:bg-neutral-900"
+                    }`}
+                  >
+                    <span className="text-base">{opt.emoji}</span>
+                    <span className="text-[9px] uppercase tracking-wider font-medium">
+                      {opt.label}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Dashboard 2-Columns Grid Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Main Column: Hábitos y Timeline (7 cols) */}
+          <div className="lg:col-span-7 space-y-6">
+            {/* Hábitos de 1-Toque */}
+            <section className="p-5 rounded-2xl bg-neutral-900/50 border border-neutral-800/80 space-y-4">
+              <div className="flex items-center justify-between">
                 <div>
-                  <div className={`w-10 h-10 rounded-xl ${pillar.bg} ${pillar.color} flex items-center justify-center mb-4 border ${pillar.border}`}>
-                    <Icon className="w-5 h-5" />
-                  </div>
-                  <h3 className="font-semibold text-neutral-100 text-base mb-1 group-hover:text-white flex items-center gap-2">
-                    {pillar.title}
-                    <ArrowRight className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-neutral-400" />
-                  </h3>
-                  <p className="text-xs text-neutral-400 leading-relaxed">
-                    {pillar.desc}
+                  <h2 className="text-sm font-semibold text-neutral-200 flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    Hábitos de Hoy ({completedHabitsCount}/{totalHabitsCount})
+                  </h2>
+                  <p className="text-[11px] text-neutral-400 mt-0.5">
+                    Marca con un solo toque para registrar consistencia
                   </p>
                 </div>
+                <Link
+                  href="/habitos"
+                  className="text-xs text-neutral-400 hover:text-white transition flex items-center gap-1 font-medium"
+                >
+                  <span>Gestionar</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+
+              {/* Progress bar */}
+              <div className="w-full h-2 bg-neutral-950 rounded-full overflow-hidden border border-neutral-800">
+                <div
+                  className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+                  style={{ width: `${hubData?.completionPercentage || 0}%` }}
+                />
+              </div>
+
+              {/* Habits List */}
+              <div className="space-y-2 pt-1">
+                {hubData?.habits.map((habit) => (
+                  <div
+                    key={habit.id}
+                    onClick={() => handleToggleHabit(habit.id)}
+                    className={`cursor-pointer p-3.5 rounded-xl border transition-all flex items-center justify-between select-none ${
+                      habit.isCompletedToday
+                        ? "bg-emerald-950/20 border-emerald-500/30 text-neutral-200"
+                        : "bg-neutral-950/70 border-neutral-800/80 hover:border-neutral-700 text-neutral-300"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ${
+                          habit.isCompletedToday
+                            ? "bg-emerald-500 text-neutral-950 font-bold"
+                            : "border-2 border-neutral-700 bg-neutral-900"
+                        }`}
+                      >
+                        {habit.isCompletedToday && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                      </div>
+
+                      <div>
+                        <span
+                          className={`text-xs sm:text-sm font-medium transition ${
+                            habit.isCompletedToday
+                              ? "line-through text-neutral-500"
+                              : "text-neutral-100"
+                          }`}
+                        >
+                          {habit.name}
+                        </span>
+                        <div className="flex items-center gap-2 text-[10px] text-neutral-500 mt-0.5">
+                          <span className="capitalize">{habit.category}</span>
+                          <span>•</span>
+                          <span>{habit.frequencyDescription}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Streak flame badge */}
+                    <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-neutral-900 border border-neutral-800 text-[11px]">
+                      <Flame
+                        className={`w-3.5 h-3.5 ${
+                          habit.currentStreak > 0
+                            ? "text-amber-400 fill-amber-400"
+                            : "text-neutral-600"
+                        }`}
+                      />
+                      <span className="font-semibold text-neutral-300">{habit.currentStreak}</span>
+                      <span className="text-[10px] text-neutral-500">d</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* Timeline Cronológico de Hoy */}
+            <section className="p-5 rounded-2xl bg-neutral-900/50 border border-neutral-800/80 space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xs font-semibold text-neutral-300 uppercase tracking-wider flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-indigo-400" />
+                  Actividad de Hoy
+                </h2>
+                <span className="text-[11px] text-neutral-500 font-mono">
+                  {hubData?.todayTimeline.length || 0} eventos
+                </span>
+              </div>
+
+              {(!hubData?.todayTimeline || hubData.todayTimeline.length === 0) ? (
+                <div className="p-6 rounded-xl bg-neutral-950/50 border border-dashed border-neutral-800 text-center text-xs text-neutral-500">
+                  Sin actividad registrada aún hoy. Al marcar hábitos o iniciar foco, aparecerá aquí.
+                </div>
+              ) : (
+                <div className="divide-y divide-neutral-800/80 border border-neutral-800/80 rounded-xl overflow-hidden bg-neutral-950/60">
+                  {hubData.todayTimeline.map((item) => (
+                    <div key={item.id} className="p-3 flex items-start justify-between gap-4 text-xs">
+                      <div>
+                        <span className="font-medium text-neutral-200">{item.title}</span>
+                        {item.summary && (
+                          <p className="text-[11px] text-neutral-500 mt-0.5">{item.summary}</p>
+                        )}
+                      </div>
+                      <span className="text-[10px] font-mono text-neutral-500 whitespace-nowrap">
+                        {new Date(item.timestamp).toLocaleTimeString("es-ES", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          </div>
+
+          {/* Secondary Column: Widgets de Foco, Academia, Cerebro & Salud (5 cols) */}
+          <div className="lg:col-span-5 space-y-6">
+            {/* Widget: Deep Work & Trabajo */}
+            <section className="p-5 rounded-2xl bg-neutral-900/50 border border-neutral-800/80 space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xs font-semibold text-neutral-300 uppercase tracking-wider flex items-center gap-2">
+                  <Briefcase className="w-4 h-4 text-amber-400" />
+                  Trabajo & Deep Work
+                </h2>
+                <Link
+                  href="/trabajo"
+                  className="text-xs text-amber-400 hover:text-amber-300 transition flex items-center gap-1 font-medium"
+                >
+                  <span>Tablero</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3.5 rounded-xl bg-neutral-950/80 border border-neutral-800/80">
+                  <div className="flex items-center gap-1.5 text-xs text-neutral-400 mb-1">
+                    <Clock className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Minutos de Foco</span>
+                  </div>
+                  <div className="text-2xl font-bold text-white font-mono">
+                    {hubData?.workSummary?.focusMinutesToday ?? 0}m
+                  </div>
+                  <span className="text-[10px] text-neutral-500">Sesiones activas</span>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-neutral-950/80 border border-neutral-800/80">
+                  <div className="flex items-center gap-1.5 text-xs text-neutral-400 mb-1">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Tareas Hechas</span>
+                  </div>
+                  <div className="text-2xl font-bold text-white font-mono">
+                    {hubData?.workSummary?.completedTasksToday ?? 0}
+                  </div>
+                  <span className="text-[10px] text-neutral-500">Completadas hoy</span>
+                </div>
+              </div>
+
+              <Link
+                href="/trabajo"
+                className="w-full py-2.5 px-3 rounded-xl bg-neutral-950 hover:bg-neutral-900 border border-neutral-800 text-xs text-neutral-200 hover:text-white flex items-center justify-center gap-2 transition font-medium"
+              >
+                <Zap className="w-3.5 h-3.5 text-amber-400" />
+                <span>Iniciar sesión de foco</span>
               </Link>
-            );
-          })}
+            </section>
+
+            {/* Widget: Próximos Exámenes & Hitos Académicos */}
+            <section className="p-5 rounded-2xl bg-neutral-900/50 border border-neutral-800/80 space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xs font-semibold text-neutral-300 uppercase tracking-wider flex items-center gap-2">
+                  <GraduationCap className="w-4 h-4 text-sky-400" />
+                  Próximos Exámenes (7d)
+                </h2>
+                <Link
+                  href="/academia"
+                  className="text-xs text-sky-400 hover:text-sky-300 transition flex items-center gap-1 font-medium"
+                >
+                  <span>Ver Todos</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+
+              {(!hubData?.upcomingExams || hubData.upcomingExams.length === 0) ? (
+                <div className="p-4 rounded-xl bg-neutral-950/60 border border-dashed border-neutral-800 text-center text-xs text-neutral-500">
+                  Sin exámenes programados para los próximos 7 días.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {hubData.upcomingExams.map((exam) => (
+                    <div
+                      key={exam.milestoneId}
+                      className="p-3 rounded-xl bg-neutral-950/80 border border-neutral-800/80 flex items-center justify-between gap-3 text-xs"
+                    >
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-semibold text-neutral-200 truncate">
+                            {exam.subjectName}
+                          </span>
+                          <span className="px-1.5 py-0.5 rounded text-[10px] bg-neutral-900 text-neutral-400 capitalize">
+                            {exam.milestoneType}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-neutral-400 truncate mt-0.5">
+                          {exam.milestoneTitle}
+                        </p>
+                      </div>
+
+                      <span
+                        className={`px-2 py-0.5 rounded-lg text-[10px] font-bold shrink-0 border ${
+                          exam.daysRemaining === 0
+                            ? "bg-rose-500/15 text-rose-400 border-rose-500/30"
+                            : exam.daysRemaining === 1
+                            ? "bg-amber-500/15 text-amber-400 border-amber-500/30"
+                            : "bg-sky-500/15 text-sky-300 border-sky-500/30"
+                        }`}
+                      >
+                        {exam.daysRemaining === 0
+                          ? "¡Hoy!"
+                          : exam.daysRemaining === 1
+                          ? "Mañana"
+                          : `En ${exam.daysRemaining} días`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {/* Quick Access to Segundo Cerebro & Salud */}
+            <div className="grid grid-cols-2 gap-3">
+              <Link
+                href="/notas"
+                className="p-4 rounded-2xl bg-neutral-900/50 border border-neutral-800/80 hover:border-neutral-700 transition flex flex-col justify-between group"
+              >
+                <div>
+                  <div className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center mb-3 border border-indigo-500/20">
+                    <BookOpen className="w-4 h-4" />
+                  </div>
+                  <h3 className="text-xs font-semibold text-neutral-200 group-hover:text-white">
+                    Segundo Cerebro
+                  </h3>
+                  <p className="text-[11px] text-neutral-500 mt-0.5">Notas y enlaces tipo Obsidian</p>
+                </div>
+                <div className="flex items-center text-[11px] text-indigo-400 mt-3 font-medium">
+                  <span>Abrir notas</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </div>
+              </Link>
+
+              <Link
+                href="/salud"
+                className="p-4 rounded-2xl bg-neutral-900/50 border border-neutral-800/80 hover:border-neutral-700 transition flex flex-col justify-between group"
+              >
+                <div>
+                  <div className="w-8 h-8 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center mb-3 border border-rose-500/20">
+                    <Activity className="w-4 h-4" />
+                  </div>
+                  <h3 className="text-xs font-semibold text-neutral-200 group-hover:text-white">
+                    Salud & Estudios
+                  </h3>
+                  <p className="text-[11px] text-neutral-500 mt-0.5">Historial clínico y métricas</p>
+                </div>
+                <div className="flex items-center text-[11px] text-rose-400 mt-3 font-medium">
+                  <span>Ver análisis</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </div>
+              </Link>
+            </div>
+
+            {/* SOMA AI Executive Assistant Widget */}
+            <div className="p-5 rounded-2xl bg-gradient-to-br from-indigo-950/40 via-purple-950/30 to-neutral-900 border border-purple-500/30 space-y-3 relative overflow-hidden">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-xl bg-purple-500/20 text-purple-300 border border-purple-500/30 flex items-center justify-center">
+                    <Sparkles className="w-3.5 h-3.5" />
+                  </div>
+                  <span className="text-xs font-bold text-white uppercase tracking-wider">
+                    SOMA AI Asistente
+                  </span>
+                </div>
+                <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                  Activo
+                </span>
+              </div>
+              <p className="text-xs text-neutral-300 leading-relaxed">
+                Pídele que registre ideas en notas, agende entregas o exámenes académicos, o cree tareas en tu Kanban.
+              </p>
+              <div className="space-y-1.5 pt-1">
+                <Link
+                  href="/asistente"
+                  className="block p-2 rounded-xl bg-neutral-950/60 border border-neutral-800 text-[11px] text-neutral-400 hover:text-white hover:border-purple-500/40 transition"
+                >
+                  &ldquo;Tengo un TP de matemática el próximo jueves, agrégalo como hito&rdquo;
+                </Link>
+                <Link
+                  href="/asistente"
+                  className="block p-2 rounded-xl bg-neutral-950/60 border border-neutral-800 text-[11px] text-neutral-400 hover:text-white hover:border-purple-500/40 transition"
+                >
+                  &ldquo;Escribe una nota sobre esta idea: Arquitectura de plugins...&rdquo;
+                </Link>
+              </div>
+              <Link
+                href="/asistente"
+                className="w-full py-2.5 px-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-lg shadow-purple-600/20 active:scale-95 transition"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Abrir Chat con Asistente</span>
+              </Link>
+            </div>
+          </div>
         </div>
-      </section>
-    </main>
+      </main>
+    </div>
   );
 }

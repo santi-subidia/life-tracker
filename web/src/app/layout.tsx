@@ -2,13 +2,13 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Life Tracker | Personal Life OS",
-  description: "Sistema Operativo Personal: Salud, Hábitos, Notas, Trabajo, Academia e Inteligencia.",
+  title: "Soma | Personal Operating System",
+  description: "Sistema Operativo Personal: Salud, Hábitos, Segundo Cerebro, Trabajo y Academia.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Life Tracker",
+    title: "Soma",
   },
 };
 

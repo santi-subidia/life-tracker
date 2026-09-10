@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using LifeTracker.Application.Academics.Services;
 using LifeTracker.Application.Ai.Services;
 using LifeTracker.Application.Common.Interfaces;
+using LifeTracker.Application.Finances.Services;
 using LifeTracker.Application.Habits.Services;
 using LifeTracker.Application.Health.Services;
 using LifeTracker.Application.Notes.Services;
@@ -52,12 +53,16 @@ public static class DependencyInjection
         services.AddSingleton<IKanbanOrderingService, KanbanOrderingService>();
         services.AddSingleton<IFocusMetricsCalculator, FocusMetricsCalculator>();
         services.AddSingleton<IGradeAverageCalculator, GradeAverageCalculator>();
+        services.AddScoped<IAccountBalanceManager, AccountBalanceManager>();
+        services.AddSingleton<IBudgetConsumptionAnalyzer, BudgetConsumptionAnalyzer>();
+        services.AddSingleton<ICashflowAggregator, CashflowAggregator>();
 
         // Seams
         services.AddScoped<IHabitTimelineProjector, HabitTimelineProjector>();
         services.AddScoped<INoteTimelineProjector, NoteTimelineProjector>();
         services.AddScoped<IWorkTimelineProjector, WorkTimelineProjector>();
         services.AddScoped<IAcademicTimelineProjector, AcademicTimelineProjector>();
+        services.AddScoped<IFinanceTimelineProjector, FinanceTimelineProjector>();
 
         // Application Services
         services.AddScoped<IHealthService, HealthService>();
@@ -66,8 +71,10 @@ public static class DependencyInjection
         services.AddScoped<INoteService, NoteService>();
         services.AddScoped<IWorkService, WorkService>();
         services.AddScoped<IAcademicService, AcademicService>();
+        services.AddScoped<IFinanceService, FinanceService>();
         services.AddScoped<IAiToolDispatcher, AiToolDispatcher>();
         services.AddScoped<IAiAssistantService, AiAssistantService>();
+        services.AddScoped<LifeTracker.Application.Profile.Services.IProfileService, LifeTracker.Application.Profile.Services.ProfileService>();
 
         return services;
     }

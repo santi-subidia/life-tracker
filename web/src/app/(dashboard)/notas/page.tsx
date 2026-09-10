@@ -60,12 +60,21 @@ export default function NotesPage() {
 
   // Panels layout state
   const [showRightPanel, setShowRightPanel] = useState(true);
+  const [showMobileInspector, setShowMobileInspector] = useState(false);
+  const [mobileView, setMobileView] = useState<"list" | "editor">("list");
   const [showGraphModal, setShowGraphModal] = useState(false);
   const [graphData, setGraphData] = useState<GraphData | null>(null);
   const [isLoadingGraph, setIsLoadingGraph] = useState(false);
 
   const [, startTransition] = useTransition();
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Adapt default editor view mode for mobile on mount
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth < 768) {
+      setEditorMode("write");
+    }
+  }, []);
 
   // 1. Fetch notes list with search and filter
   const fetchNotes = useCallback(async (search?: string, tag?: string) => {
@@ -91,8 +100,8 @@ export default function NotesPage() {
   useEffect(() => {
     fetchNotes().then((loaded) => {
       if (loaded.length > 0) {
-        // Select first note if available
-        selectNote(loaded[0].slug);
+        // Select first note silently for desktop, but do not switch to editor on mobile
+        selectNote(loaded[0].slug, true);
       }
     });
   }, [fetchNotes]);
@@ -106,7 +115,7 @@ export default function NotesPage() {
   }, [searchQuery, selectedTag, fetchNotes]);
 
   // 2. Select and load Note Detail
-  const selectNote = async (idOrSlug: string) => {
+  const selectNote = async (idOrSlug: string, isInitialLoad = false) => {
     try {
       setIsLoadingDetail(true);
       const detail = await LifeTrackerApiClient.getNote(idOrSlug);
@@ -116,6 +125,9 @@ export default function NotesPage() {
       setDraftPinned(detail.pinned);
       setIsDirty(false);
       setSaveStatus("saved");
+      if (!isInitialLoad) {
+        setMobileView("editor");
+      }
     } catch (err) {
       console.error("Error loading note detail:", err);
     } finally {
@@ -189,6 +201,7 @@ export default function NotesPage() {
 
       await fetchNotes(searchQuery, selectedTag || undefined);
       await selectNote(newNote.slug);
+      setMobileView("editor");
     } catch (err) {
       console.error("Error creating new note:", err);
     }
@@ -204,10 +217,11 @@ export default function NotesPage() {
       await LifeTrackerApiClient.deleteNote(activeNote.id, false);
       const remaining = await fetchNotes(searchQuery, selectedTag || undefined);
       if (remaining.length > 0) {
-        selectNote(remaining[0].slug);
+        selectNote(remaining[0].slug, true);
       } else {
         setActiveNote(null);
       }
+      setMobileView("list");
     } catch (err) {
       console.error("Error deleting note:", err);
     }
@@ -238,6 +252,7 @@ export default function NotesPage() {
 
     if (found) {
       selectNote(found.slug);
+      setMobileView("editor");
     } else {
       // Create as a real note or open directly
       try {
@@ -247,9 +262,15 @@ export default function NotesPage() {
         });
         await fetchNotes(searchQuery, selectedTag || undefined);
         selectNote(created.slug);
+        setMobileView("editor");
       } catch {
         selectNote(targetTitleOrSlug);
+        setMobileView("editor");
       }
+    }
+
+    if (showMobileInspector) {
+      setShowMobileInspector(false);
     }
 
     if (showGraphModal) {
@@ -272,23 +293,27 @@ export default function NotesPage() {
   return (
     <div className="flex flex-col h-screen bg-zinc-950 text-zinc-100 overflow-hidden font-sans">
       {/* Top Application Bar */}
-      <header className="h-14 border-b border-zinc-800 bg-zinc-900/60 backdrop-blur-md px-4 flex items-center justify-between shrink-0 select-none z-20">
-        <div className="flex items-center gap-3">
+      <header
+        className={`h-14 border-b border-zinc-800 bg-zinc-900/60 backdrop-blur-md px-3 sm:px-4 items-center justify-between shrink-0 select-none z-20 ${
+          mobileView === "editor" ? "hidden md:flex" : "flex"
+        }`}
+      >
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
           <Link
             href="/"
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition"
+            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition shrink-0"
             title="Volver al Dashboard"
           >
             <ArrowLeft className="w-4 h-4" />
           </Link>
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-7 h-7 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
               <BookOpen className="w-4 h-4" />
             </div>
-            <div>
-              <h1 className="text-sm font-semibold leading-none flex items-center gap-2">
-                <span>Segundo Cerebro</span>
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700/60">
+            <div className="truncate">
+              <h1 className="text-sm font-semibold leading-none flex items-center gap-1.5">
+                <span className="truncate">Segundo Cerebro</span>
+                <span className="hidden sm:inline-block text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700/60">
                   Obsidian Style
                 </span>
               </h1>
@@ -297,11 +322,11 @@ export default function NotesPage() {
         </div>
 
         {/* Global actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           <button
             type="button"
             onClick={handleOpenGraph}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-850 text-zinc-300 hover:text-white border border-zinc-800 text-xs font-medium transition shadow-sm"
+            className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-850 text-zinc-300 hover:text-white border border-zinc-800 text-xs font-medium transition shadow-sm"
           >
             <Share2 className="w-3.5 h-3.5 text-indigo-400" />
             <span className="hidden sm:inline">Red de Notas</span>
@@ -309,7 +334,7 @@ export default function NotesPage() {
           <button
             type="button"
             onClick={handleCreateNote}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-lg shadow-indigo-600/20 transition"
+            className="inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-lg shadow-indigo-600/20 transition"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Nueva Nota</span>
@@ -322,7 +347,11 @@ export default function NotesPage() {
         {/* ============================================================================== */}
         {/* LEFT COLUMN: Notes List & Search */}
         {/* ============================================================================== */}
-        <aside className="w-80 sm:w-88 border-r border-zinc-800/80 bg-zinc-950 flex flex-col shrink-0">
+        <aside
+          className={`w-full md:w-80 lg:w-88 border-r border-zinc-800/80 bg-zinc-950 flex-col shrink-0 ${
+            mobileView === "editor" ? "hidden md:flex" : "flex"
+          }`}
+        >
           {/* Search & Filter Bar */}
           <div className="p-3 border-b border-zinc-800/80 space-y-2.5">
             <div className="relative">
@@ -414,7 +443,10 @@ export default function NotesPage() {
                 return (
                   <div
                     key={note.id}
-                    onClick={() => selectNote(note.slug)}
+                    onClick={() => {
+                      selectNote(note.slug);
+                      setMobileView("editor");
+                    }}
                     className={`group p-3 rounded-xl border transition cursor-pointer select-none relative ${
                       isSelected
                         ? "bg-zinc-900/95 border-indigo-500/50 shadow-sm"
@@ -490,12 +522,27 @@ export default function NotesPage() {
         {/* ============================================================================== */}
         {/* CENTER COLUMN: Note Editor & Preview */}
         {/* ============================================================================== */}
-        <main className="flex-1 flex flex-col bg-zinc-950 overflow-hidden relative">
+        <main
+          className={`flex-1 flex-col bg-zinc-950 overflow-hidden relative min-w-0 ${
+            mobileView === "list" ? "hidden md:flex" : "flex"
+          }`}
+        >
           {activeNote ? (
             <>
               {/* Note Header Bar */}
-              <div className="px-6 py-3 border-b border-zinc-800/80 bg-zinc-900/30 flex items-center justify-between gap-4 shrink-0">
-                <div className="flex-1 flex items-center gap-2 min-w-0">
+              <div className="px-3 py-2 sm:px-6 sm:py-3 border-b border-zinc-800/80 bg-zinc-900/30 flex items-center justify-between gap-2 sm:gap-4 shrink-0">
+                <div className="flex-1 flex items-center gap-1.5 sm:gap-2 min-w-0">
+                  {/* Back button to list on mobile */}
+                  <button
+                    type="button"
+                    onClick={() => setMobileView("list")}
+                    className="md:hidden inline-flex items-center gap-1 p-1.5 -ml-1 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition text-xs font-medium shrink-0"
+                    title="Volver a la lista de notas"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    <span className="hidden sm:inline">Notas</span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => {
@@ -503,7 +550,7 @@ export default function NotesPage() {
                       setIsDirty(true);
                     }}
                     title={draftPinned ? "Desanclar nota" : "Fijar nota al inicio"}
-                    className={`p-1.5 rounded-lg transition ${
+                    className={`p-1.5 rounded-lg transition shrink-0 ${
                       draftPinned
                         ? "text-amber-400 bg-amber-400/10 hover:bg-amber-400/20"
                         : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800"
@@ -520,30 +567,30 @@ export default function NotesPage() {
                       setIsDirty(true);
                     }}
                     placeholder="Título de la nota..."
-                    className="flex-1 text-lg sm:text-xl font-bold bg-transparent text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-0 border-none truncate"
+                    className="flex-1 text-base sm:text-xl font-bold bg-transparent text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-0 border-none truncate min-w-0"
                   />
                 </div>
 
                 {/* Status & Action buttons */}
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                   {/* Save state badge */}
                   <span className="text-xs flex items-center gap-1 font-mono text-zinc-500">
                     {saveStatus === "saving" && (
                       <>
                         <Sparkles className="w-3 h-3 text-indigo-400 animate-spin" />
-                        <span className="text-indigo-400">Guardando...</span>
+                        <span className="hidden sm:inline text-indigo-400">Guardando...</span>
                       </>
                     )}
                     {saveStatus === "saved" && (
                       <>
-                        <Check className="w-3 h-3 text-emerald-400" />
-                        <span className="text-zinc-400">Guardado</span>
+                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        <span className="hidden sm:inline text-zinc-400">Guardado</span>
                       </>
                     )}
                     {saveStatus === "unsaved" && (
                       <>
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                        <span className="text-amber-400">Sin guardar</span>
+                        <span className="w-2 h-2 rounded-full bg-amber-400" />
+                        <span className="hidden sm:inline text-amber-400">Sin guardar</span>
                       </>
                     )}
                   </span>
@@ -553,7 +600,7 @@ export default function NotesPage() {
                     onClick={() => handleSave(true)}
                     disabled={!isDirty || saveStatus === "saving"}
                     title="Guardar ahora (Ctrl+S)"
-                    className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                    className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition shrink-0"
                   >
                     <Save className="w-4 h-4" />
                   </button>
@@ -562,19 +609,34 @@ export default function NotesPage() {
                     type="button"
                     onClick={handleDeleteNote}
                     title="Archivar nota"
-                    className="p-1.5 rounded-lg text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 transition"
+                    className="p-1.5 rounded-lg text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 transition shrink-0"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
 
-                  <div className="w-[1px] h-4 bg-zinc-800 mx-1" />
+                  <div className="w-[1px] h-4 bg-zinc-800 mx-0.5 sm:mx-1 shrink-0" />
 
-                  {/* Toggle Inspector panel button */}
+                  {/* Mobile Backlinks drawer toggle (visible on < lg) */}
+                  <button
+                    type="button"
+                    onClick={() => setShowMobileInspector(true)}
+                    title="Ver conexiones y backlinks"
+                    className="lg:hidden relative p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition shrink-0"
+                  >
+                    <Link2 className="w-4 h-4 text-indigo-400" />
+                    {((activeNote.backlinks?.length || 0) + (activeNote.outgoingLinks?.length || 0)) > 0 && (
+                      <span className="absolute -top-1 -right-1 px-1 min-w-[14px] h-3.5 text-[9px] font-bold rounded-full bg-indigo-600 text-white flex items-center justify-center">
+                        {(activeNote.backlinks?.length || 0) + (activeNote.outgoingLinks?.length || 0)}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Desktop Inspector panel button (visible on >= lg) */}
                   <button
                     type="button"
                     onClick={() => setShowRightPanel(!showRightPanel)}
                     title={showRightPanel ? "Ocultar panel lateral" : "Mostrar panel de conexiones"}
-                    className={`p-1.5 rounded-lg transition ${
+                    className={`hidden lg:inline-flex p-1.5 rounded-lg transition shrink-0 ${
                       showRightPanel
                         ? "text-indigo-400 bg-indigo-500/10"
                         : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800"
@@ -590,7 +652,7 @@ export default function NotesPage() {
               </div>
 
               {/* Editor Workspace */}
-              <div className="flex-1 p-4 overflow-hidden">
+              <div className="flex-1 p-2 sm:p-4 overflow-hidden min-h-0">
                 <MarkdownEditor
                   value={draftContent}
                   onChange={(val) => {
@@ -627,10 +689,10 @@ export default function NotesPage() {
         </main>
 
         {/* ============================================================================== */}
-        {/* RIGHT COLUMN: Backlinks & Connections Inspector */}
+        {/* RIGHT COLUMN: Backlinks & Connections Inspector (Desktop >= lg) */}
         {/* ============================================================================== */}
         {showRightPanel && activeNote && (
-          <aside className="w-72 sm:w-80 border-l border-zinc-800/80 bg-zinc-950 flex flex-col shrink-0 p-3">
+          <aside className="hidden lg:flex w-72 xl:w-80 border-l border-zinc-800/80 bg-zinc-950 flex-col shrink-0 p-3">
             <BacklinksPanel
               backlinks={activeNote.backlinks || []}
               outgoingLinks={activeNote.outgoingLinks || []}
@@ -642,11 +704,31 @@ export default function NotesPage() {
       </div>
 
       {/* ============================================================================== */}
+      {/* MOBILE CONNECTIONS DRAWER (< lg) */}
+      {/* ============================================================================== */}
+      {showMobileInspector && activeNote && (
+        <div className="lg:hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex justify-end animate-in fade-in duration-150">
+          <div className="w-full max-w-sm h-full bg-zinc-950 border-l border-zinc-800 p-3 shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
+            <BacklinksPanel
+              backlinks={activeNote.backlinks || []}
+              outgoingLinks={activeNote.outgoingLinks || []}
+              onSelectNote={(slug) => {
+                selectNote(slug);
+                setShowMobileInspector(false);
+              }}
+              onClose={() => setShowMobileInspector(false)}
+              className="h-full shadow-none border-none"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================================== */}
       {/* MODAL: Fullscreen Graph View */}
       {/* ============================================================================== */}
       {showGraphModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-150">
-          <div className="relative w-full h-full max-w-6xl max-h-[90vh] bg-zinc-950 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-0 sm:p-6 animate-in fade-in duration-150">
+          <div className="relative w-full h-full max-w-6xl max-h-screen sm:max-h-[90vh] bg-zinc-950 border-0 sm:border sm:border-zinc-800 rounded-none sm:rounded-2xl overflow-hidden shadow-2xl flex flex-col">
             {isLoadingGraph || !graphData ? (
               <div className="flex-1 flex flex-col items-center justify-center text-zinc-400 space-y-3">
                 <Share2 className="w-8 h-8 text-indigo-400 animate-pulse" />
@@ -656,7 +738,10 @@ export default function NotesPage() {
               <GraphView
                 data={graphData}
                 currentNoteId={activeNote?.id}
-                onSelectNode={(node) => handleNavigateToNote(node.slug)}
+                onSelectNode={(node) => {
+                  handleNavigateToNote(node.slug);
+                  setShowGraphModal(false);
+                }}
                 onClose={() => setShowGraphModal(false)}
                 className="flex-1"
               />

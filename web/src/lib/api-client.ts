@@ -499,6 +499,243 @@ export interface UpdateAiConversationTitlePayload {
 }
 
 // ==============================================================================
+// FINANCES & PERSONAL CASHFLOW
+// ==============================================================================
+
+export type AccountType =
+  | "Cash"
+  | "Bank"
+  | "DigitalWallet"
+  | "Crypto"
+  | "Other"
+  | "cash"
+  | "bank"
+  | "digital_wallet"
+  | "crypto"
+  | "other"
+  | 0
+  | 1
+  | 2
+  | 3
+  | 4;
+
+export type CategoryType =
+  | "Expense"
+  | "Income"
+  | "Both"
+  | "expense"
+  | "income"
+  | "both"
+  | 0
+  | 1
+  | 2;
+
+export type TransactionType =
+  | "Expense"
+  | "Income"
+  | "Transfer"
+  | "expense"
+  | "income"
+  | "transfer"
+  | 0
+  | 1
+  | 2;
+
+export type BudgetAlertStatus =
+  | "Normal"
+  | "Warning"
+  | "Exceeded"
+  | "normal"
+  | "warning"
+  | "exceeded"
+  | 0
+  | 1
+  | 2;
+
+export interface FinancialAccount {
+  id: string;
+  userId: string;
+  name: string;
+  accountType: AccountType;
+  currency: string;
+  initialBalance: number;
+  currentBalance: number;
+  color: string;
+  icon: string;
+  isArchived: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateFinancialAccountRequest {
+  name: string;
+  accountType: AccountType;
+  currency: string;
+  initialBalance?: number;
+  color?: string;
+  icon?: string;
+}
+
+export interface UpdateFinancialAccountRequest {
+  name: string;
+  color?: string;
+  icon?: string;
+}
+
+export interface TransactionCategory {
+  id: string;
+  userId: string;
+  name: string;
+  type: CategoryType;
+  color: string;
+  icon: string;
+  isSystem: boolean;
+  displayOrder: number;
+  createdAt: string;
+}
+
+export interface CreateTransactionCategoryRequest {
+  name: string;
+  type?: CategoryType;
+  color?: string;
+  icon?: string;
+  displayOrder?: number;
+}
+
+export interface UpdateTransactionCategoryRequest {
+  name: string;
+  type: CategoryType;
+  color: string;
+  icon: string;
+  displayOrder: number;
+}
+
+export interface Transaction {
+  id: string;
+  userId: string;
+  accountId: string;
+  accountName: string;
+  accountCurrency: string;
+  destinationAccountId?: string | null;
+  destinationAccountName?: string | null;
+  destinationAccountCurrency?: string | null;
+  categoryId?: string | null;
+  categoryName?: string | null;
+  categoryColor?: string | null;
+  categoryIcon?: string | null;
+  type: TransactionType;
+  amount: number;
+  destinationAmount?: number | null;
+  exchangeRate?: number | null;
+  date: string;
+  timestamp: string;
+  description: string;
+  notes?: string | null;
+  tags?: string[];
+  isCleared: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateTransactionRequest {
+  accountId: string;
+  type: TransactionType;
+  amount: number;
+  description: string;
+  date?: string | null;
+  timestamp?: string | null;
+  destinationAccountId?: string | null;
+  destinationAmount?: number | null;
+  exchangeRate?: number | null;
+  categoryId?: string | null;
+  notes?: string | null;
+  tags?: string[] | null;
+  isCleared?: boolean;
+}
+
+export interface UpdateTransactionRequest {
+  accountId: string;
+  type: TransactionType;
+  amount: number;
+  description: string;
+  date: string;
+  timestamp?: string | null;
+  destinationAccountId?: string | null;
+  destinationAmount?: number | null;
+  exchangeRate?: number | null;
+  categoryId?: string | null;
+  notes?: string | null;
+  tags?: string[] | null;
+  isCleared?: boolean;
+}
+
+export interface TransactionFilterRequest {
+  accountId?: string;
+  categoryId?: string;
+  type?: TransactionType;
+  startDate?: string;
+  endDate?: string;
+  search?: string;
+  currency?: string;
+  month?: number;
+  year?: number;
+  limit?: number;
+  offset?: number;
+}
+
+export interface BudgetExecution {
+  id: string;
+  userId: string;
+  categoryId?: string | null;
+  categoryName?: string | null;
+  categoryColor?: string | null;
+  categoryIcon?: string | null;
+  month: number;
+  year: number;
+  limitAmount: number;
+  spentAmount: number;
+  remainingAmount: number;
+  percentage: number;
+  status: BudgetAlertStatus;
+  currency: string;
+}
+
+export interface CreateOrUpdateBudgetRequest {
+  month: number;
+  year: number;
+  limitAmount: number;
+  currency?: string;
+  categoryId?: string | null;
+}
+
+export interface CategoryExpenseSummary {
+  categoryId?: string | null;
+  categoryName: string;
+  color: string;
+  icon: string;
+  amount: number;
+  percentage: number;
+}
+
+export interface CurrencyCashflowSummary {
+  currency: string;
+  totalLiquidity: number;
+  totalIncome: number;
+  totalExpense: number;
+  netSavings: number;
+  savingsRatePercentage: number;
+  expensesByCategory: CategoryExpenseSummary[];
+}
+
+export interface CashflowSummary {
+  month: number;
+  year: number;
+  ars: CurrencyCashflowSummary;
+  usd: CurrencyCashflowSummary;
+  otherCurrencies?: CurrencyCashflowSummary[];
+}
+
+// ==============================================================================
 // API CLIENT IMPLEMENTATION
 // ==============================================================================
 
@@ -1163,5 +1400,293 @@ export class LifeTrackerApiClient {
     });
     if (!res.ok) throw new Error("Error al eliminar la conversación.");
   }
+
+  // --- PROFILE & ANALYTICS SUMMARY ---
+
+  static async getProfileSummary(period: "week" | "month" | "year" = "week", token?: string): Promise<ProfileSummary> {
+    const url = new URL(`${API_BASE_URL}/api/profile/summary`);
+    url.searchParams.set("period", period);
+
+    const res = await fetch(url.toString(), {
+      headers: this.getHeaders(token),
+    });
+
+    if (!res.ok) throw new Error("Error al obtener el resumen analítico del perfil.");
+    return res.json();
+  }
+
+  // --- FINANCES: ACCOUNTS ---
+
+  static async getFinanceAccounts(includeArchived = false, token?: string): Promise<FinancialAccount[]> {
+    const url = new URL(`${API_BASE_URL}/api/finances/accounts`);
+    if (includeArchived) url.searchParams.set("includeArchived", "true");
+
+    const res = await fetch(url.toString(), {
+      headers: this.getHeaders(token),
+    });
+    if (!res.ok) throw new Error("Error al obtener las cuentas financieras.");
+    return res.json();
+  }
+
+  static async createFinanceAccount(data: CreateFinancialAccountRequest, token?: string): Promise<FinancialAccount> {
+    const res = await fetch(`${API_BASE_URL}/api/finances/accounts`, {
+      method: "POST",
+      headers: {
+        ...this.getHeaders(token),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Error al crear la cuenta financiera.");
+    }
+    return res.json();
+  }
+
+  static async updateFinanceAccount(id: string, data: UpdateFinancialAccountRequest, token?: string): Promise<FinancialAccount> {
+    const res = await fetch(`${API_BASE_URL}/api/finances/accounts/${id}`, {
+      method: "PUT",
+      headers: {
+        ...this.getHeaders(token),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Error al actualizar la cuenta financiera.");
+    }
+    return res.json();
+  }
+
+  static async deleteFinanceAccount(id: string, token?: string): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/api/finances/accounts/${id}`, {
+      method: "DELETE",
+      headers: this.getHeaders(token),
+    });
+    if (!res.ok) throw new Error("Error al eliminar la cuenta financiera.");
+  }
+
+  static async archiveFinanceAccount(id: string, token?: string): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/api/finances/accounts/${id}/archive`, {
+      method: "POST",
+      headers: this.getHeaders(token),
+    });
+    if (!res.ok) throw new Error("Error al archivar la cuenta financiera.");
+  }
+
+  static async restoreFinanceAccount(id: string, token?: string): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/api/finances/accounts/${id}/restore`, {
+      method: "POST",
+      headers: this.getHeaders(token),
+    });
+    if (!res.ok) throw new Error("Error al restaurar la cuenta financiera.");
+  }
+
+  // --- FINANCES: CATEGORIES ---
+
+  static async getFinanceCategories(token?: string): Promise<TransactionCategory[]> {
+    const res = await fetch(`${API_BASE_URL}/api/finances/categories`, {
+      headers: this.getHeaders(token),
+    });
+    if (!res.ok) throw new Error("Error al obtener las categorías de transacciones.");
+    return res.json();
+  }
+
+  static async createFinanceCategory(data: CreateTransactionCategoryRequest, token?: string): Promise<TransactionCategory> {
+    const res = await fetch(`${API_BASE_URL}/api/finances/categories`, {
+      method: "POST",
+      headers: {
+        ...this.getHeaders(token),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Error al crear la categoría de transacción.");
+    }
+    return res.json();
+  }
+
+  // --- FINANCES: TRANSACTIONS ---
+
+  static async getFinanceTransactions(filters?: TransactionFilterRequest, token?: string): Promise<Transaction[]> {
+    const url = new URL(`${API_BASE_URL}/api/finances/transactions`);
+    if (filters) {
+      if (filters.accountId) url.searchParams.set("accountId", filters.accountId);
+      if (filters.categoryId) url.searchParams.set("categoryId", filters.categoryId);
+      if (filters.type !== undefined && filters.type !== null) url.searchParams.set("type", filters.type.toString());
+      if (filters.startDate) url.searchParams.set("startDate", filters.startDate);
+      if (filters.endDate) url.searchParams.set("endDate", filters.endDate);
+      if (filters.search) url.searchParams.set("search", filters.search);
+      if (filters.currency) url.searchParams.set("currency", filters.currency);
+      if (filters.month !== undefined && filters.month !== null) url.searchParams.set("month", filters.month.toString());
+      if (filters.year !== undefined && filters.year !== null) url.searchParams.set("year", filters.year.toString());
+      if (filters.limit !== undefined && filters.limit !== null) url.searchParams.set("limit", filters.limit.toString());
+      if (filters.offset !== undefined && filters.offset !== null) url.searchParams.set("offset", filters.offset.toString());
+    }
+
+    const res = await fetch(url.toString(), {
+      headers: this.getHeaders(token),
+    });
+    if (!res.ok) throw new Error("Error al obtener las transacciones financieras.");
+    return res.json();
+  }
+
+  static async createFinanceTransaction(data: CreateTransactionRequest, token?: string): Promise<Transaction> {
+    const res = await fetch(`${API_BASE_URL}/api/finances/transactions`, {
+      method: "POST",
+      headers: {
+        ...this.getHeaders(token),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Error al registrar la transacción.");
+    }
+    return res.json();
+  }
+
+  static async updateFinanceTransaction(id: string, data: UpdateTransactionRequest, token?: string): Promise<Transaction> {
+    const res = await fetch(`${API_BASE_URL}/api/finances/transactions/${id}`, {
+      method: "PUT",
+      headers: {
+        ...this.getHeaders(token),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Error al actualizar la transacción.");
+    }
+    return res.json();
+  }
+
+  static async deleteFinanceTransaction(id: string, token?: string): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/api/finances/transactions/${id}`, {
+      method: "DELETE",
+      headers: this.getHeaders(token),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Error al revertir y eliminar la transacción.");
+    }
+  }
+
+  // --- FINANCES: CASHFLOW SUMMARY & BUDGETS ---
+
+  static async getFinanceSummary(month?: number, year?: number, currency?: string, token?: string): Promise<CashflowSummary> {
+    const url = new URL(`${API_BASE_URL}/api/finances/summary`);
+    if (month) url.searchParams.set("month", month.toString());
+    if (year) url.searchParams.set("year", year.toString());
+    if (currency) url.searchParams.set("currency", currency);
+
+    const res = await fetch(url.toString(), {
+      headers: this.getHeaders(token),
+    });
+    if (!res.ok) throw new Error("Error al obtener el resumen de flujo de caja.");
+    return res.json();
+  }
+
+  static async getFinanceBudgets(month?: number, year?: number, currency?: string, token?: string): Promise<BudgetExecution[]> {
+    const url = new URL(`${API_BASE_URL}/api/finances/budgets`);
+    if (month) url.searchParams.set("month", month.toString());
+    if (year) url.searchParams.set("year", year.toString());
+    if (currency) url.searchParams.set("currency", currency);
+
+    const res = await fetch(url.toString(), {
+      headers: this.getHeaders(token),
+    });
+    if (!res.ok) throw new Error("Error al obtener la ejecución presupuestaria.");
+    return res.json();
+  }
+
+  static async setFinanceBudget(data: CreateOrUpdateBudgetRequest, token?: string): Promise<BudgetExecution> {
+    const res = await fetch(`${API_BASE_URL}/api/finances/budgets`, {
+      method: "POST",
+      headers: {
+        ...this.getHeaders(token),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Error al definir el presupuesto.");
+    }
+    return res.json();
+  }
+
+  static async deleteFinanceBudget(id: string, token?: string): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/api/finances/budgets/${id}`, {
+      method: "DELETE",
+      headers: this.getHeaders(token),
+    });
+    if (!res.ok) throw new Error("Error al eliminar el presupuesto.");
+  }
+
+  static getUserProfile(): UserProfileSettings {
+    if (typeof window === "undefined") {
+      return { name: "Subi", title: "Software Engineer & Student", bio: "Construyendo sistemas de alto rendimiento y hábitos de acero." };
+    }
+    try {
+      const saved = localStorage.getItem("lt_user_profile");
+      if (saved) return JSON.parse(saved);
+    } catch {
+      // Ignore
+    }
+    return { name: "Subi", title: "Software Engineer & Student", bio: "Construyendo sistemas de alto rendimiento y hábitos de acero." };
+  }
+
+  static saveUserProfile(profile: UserProfileSettings): void {
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.setItem("lt_user_profile", JSON.stringify(profile));
+      window.dispatchEvent(new Event("user_profile_updated"));
+    } catch {
+      // Ignore
+    }
+  }
 }
+
+// ==============================================================================
+// PROFILE & SUMMARY INTERFACES
+// ==============================================================================
+
+export interface ProfileActivityPoint {
+  date: string;
+  focusMinutes: number;
+  completedHabits: number;
+  completedTasks: number;
+  eventsCount: number;
+}
+
+export interface ProfileSummary {
+  period: "week" | "month" | "year";
+  startDate: string;
+  endDate: string;
+  totalFocusMinutes: number;
+  totalFocusSessions: number;
+  completedHabits: number;
+  longestStreak: number;
+  completedTasks: number;
+  notesCreated: number;
+  approvedMilestones: number;
+  healthStudiesCount: number;
+  activityTimeline: ProfileActivityPoint[];
+}
+
+export interface UserProfileSettings {
+  name: string;
+  title?: string;
+  bio?: string;
+}
+
+export const ApiClient = LifeTrackerApiClient;
+
 

@@ -69,11 +69,14 @@ export function CreateTaskModal({
       setSaving(true);
       setError(null);
 
+      const guidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const validProjectId = projectId && guidRegex.test(projectId) ? projectId : undefined;
+
       if (taskToEdit) {
         const payload: UpdateWorkTaskPayload = {
           title: title.trim(),
           description: description.trim() || undefined,
-          projectId: projectId || undefined,
+          projectId: validProjectId,
           priority,
           dueDate: dueDate || undefined,
         };
@@ -82,7 +85,7 @@ export function CreateTaskModal({
         const payload: CreateWorkTaskPayload = {
           title: title.trim(),
           description: description.trim() || undefined,
-          projectId: projectId || undefined,
+          projectId: validProjectId,
           status,
           priority,
           dueDate: dueDate || undefined,

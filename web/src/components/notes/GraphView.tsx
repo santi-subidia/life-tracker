@@ -523,10 +523,79 @@ export function GraphView({
     setZoomDisplay(Math.round(newZoom * 100));
   };
 
+  // Touch interaction support for mobile & tablets
+  const getTouchCoords = (touch: React.Touch) => {
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return { x: 0, y: 0, screenX: 0, screenY: 0 };
+    const screenX = touch.clientX - rect.left;
+    const screenY = touch.clientY - rect.top;
+    const graphX = (screenX - panRef.current.x) / zoomRef.current;
+    const graphY = (screenY - panRef.current.y) / zoomRef.current;
+    return { x: graphX, y: graphY, screenX, screenY };
+  };
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    if (e.touches.length === 1) {
+      const coords = getTouchCoords(e.touches[0]);
+      const clickedNode = findNodeAt(coords.x, coords.y);
+      if (clickedNode) {
+        draggedNodeRef.current = clickedNode;
+        clickedNode.vx = 0;
+        clickedNode.vy = 0;
+      } else {
+        isDraggingCameraRef.current = true;
+        dragStartRef.current = { x: coords.screenX, y: coords.screenY };
+      }
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    if (e.touches.length === 1) {
+      const coords = getTouchCoords(e.touches[0]);
+
+      if (draggedNodeRef.current) {
+        const node = draggedNodeRef.current;
+        node.x = coords.x;
+        node.y = coords.y;
+        node.vx = 0;
+        node.vy = 0;
+        return;
+      }
+
+      if (isDraggingCameraRef.current) {
+        const dx = coords.screenX - dragStartRef.current.x;
+        const dy = coords.screenY - dragStartRef.current.y;
+        panRef.current = {
+          x: panRef.current.x + dx,
+          y: panRef.current.y + dy,
+        };
+        dragStartRef.current = { x: coords.screenX, y: coords.screenY };
+        return;
+      }
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    if (draggedNodeRef.current) {
+      const dragged = draggedNodeRef.current;
+      draggedNodeRef.current = null;
+      if (e.changedTouches.length > 0) {
+        const coords = getTouchCoords(e.changedTouches[0]);
+        const dx = dragged.x - coords.x;
+        const dy = dragged.y - coords.y;
+        if (dx * dx + dy * dy < 36 && onSelectNode) {
+          onSelectNode(dragged);
+        }
+      }
+      return;
+    }
+    isDraggingCameraRef.current = false;
+  };
+
   return (
     <div
       ref={containerRef}
-      className={`relative w-full h-full min-h-[450px] bg-zinc-950 overflow-hidden select-none ${className}`}
+      className={`relative w-full h-full min-h-[350px] md:min-h-[450px] bg-zinc-950 overflow-hidden select-none ${className}`}
     >
       {/* HTML5 Canvas */}
       <canvas
@@ -535,7 +604,10 @@ export function GraphView({
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onWheel={handleWheel}
-        className="w-full h-full cursor-grab active:cursor-grabbing block"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        className="w-full h-full cursor-grab active:cursor-grabbing block touch-none"
       />
 
       {/* Floating Header info */}

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { 
   Play, 
   Pause, 
@@ -13,7 +14,10 @@ import {
   Briefcase, 
   Check, 
   Sparkles,
-  AlertCircle
+  AlertCircle,
+  Settings2,
+  Award,
+  SlidersHorizontal
 } from "lucide-react";
 import { 
   LifeTrackerApiClient, 
@@ -32,9 +36,19 @@ interface DeepWorkTimerProps {
 type TimerMode = "pomodoro" | "stopwatch";
 type PomodoroPhase = "work" | "break";
 
+export interface PomodoroSettings {
+  workMinutes: number;
+  breakMinutes: number;
+  targetBlocks: number;
+}
+
 const STORAGE_KEY = "lt_deep_work_timer";
-const POMODORO_WORK_SECONDS = 25 * 60; // 25 min
-const POMODORO_BREAK_SECONDS = 5 * 60; // 5 min
+const SETTINGS_KEY = "lt_pomodoro_settings";
+const DEFAULT_SETTINGS: PomodoroSettings = {
+  workMinutes: 25,
+  breakMinutes: 5,
+  targetBlocks: 4,
+};
 
 interface StoredTimerData {
   mode: TimerMode;
@@ -45,6 +59,8 @@ interface StoredTimerData {
   isRunning: boolean;
   lastTimestamp: number;
   sessionStartedAt: string;
+  currentBlock?: number;
+  completedBlocks?: number;
 }
 
 // Sound chime using Web Audio API
@@ -75,10 +91,29 @@ function playChime() {
 }
 
 export function DeepWorkTimer({ projects, tasks, onSessionRecorded }: DeepWorkTimerProps) {
+  // Client mount check for portal
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Pomodoro Settings
+  const [pomodoroSettings, setPomodoroSettings] = useState<PomodoroSettings>(DEFAULT_SETTINGS);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [settingWorkMins, setSettingWorkMins] = useState(DEFAULT_SETTINGS.workMinutes);
+  const [settingBreakMins, setSettingBreakMins] = useState(DEFAULT_SETTINGS.breakMinutes);
+  const [settingBlocks, setSettingBlocks] = useState(DEFAULT_SETTINGS.targetBlocks);
+  const [savedSettingsNotice, setSavedSettingsNotice] = useState<string | null>(null);
+
+  // Blocks tracking
+  const [currentBlock, setCurrentBlock] = useState<number>(1);
+  const [completedBlocks, setCompletedBlocks] = useState<number>(0);
+  const [goalReached, setGoalReached] = useState<boolean>(false);
+
   // Timer State
   const [mode, setMode] = useState<TimerMode>("pomodoro");
   const [pomodoroPhase, setPomodoroPhase] = useState<PomodoroPhase>("work");
-  const [secondsLeft, setSecondsLeft] = useState<number>(POMODORO_WORK_SECONDS);
+  const [secondsLeft, setSecondsLeft] = useState<number>(DEFAULT_SETTINGS.workMinutes * 60);
   const [stopwatchElapsed, setStopwatchElapsed] = useState<number>(0);
   const [totalFocusSeconds, setTotalFocusSeconds] = useState<number>(0);
   const [isRunning, setIsRunning] = useState<boolean>(false);
@@ -95,15 +130,27 @@ export function DeepWorkTimer({ projects, tasks, onSessionRecorded }: DeepWorkTi
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load from localStorage on mount
+  // Load settings & timer state from localStorage on mount
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const data: StoredTimerData = JSON.parse(saved);
+      const savedSettings = localStorage.getItem(SETTINGS_KEY);
+      let loadedSettings = DEFAULT_SETTINGS;
+      if (savedSettings) {
+        loadedSettings = JSON.parse(savedSettings);
+        setPomodoroSettings(loadedSettings);
+        setSettingWorkMins(loadedSettings.workMinutes);
+        setSettingBreakMins(loadedSettings.breakMinutes);
+        setSettingBlocks(loadedSettings.targetBlocks);
+      }
+
+      const savedTimer = localStorage.getItem(STORAGE_KEY);
+      if (savedTimer) {
+        const data: StoredTimerData = JSON.parse(savedTimer);
         setMode(data.mode);
         setPomodoroPhase(data.pomodoroPhase);
         setSessionStartedAt(data.sessionStartedAt || new Date().toISOString());
+        if (typeof data.currentBlock === "number") setCurrentBlock(data.currentBlock);
+        if (typeof data.completedBlocks === "number") setCompletedBlocks(data.completedBlocks);
 
         const now = Date.now();
         const deltaSeconds = data.isRunning ? Math.max(0, Math.floor((now - data.lastTimestamp) / 1000)) : 0;
@@ -126,6 +173,8 @@ export function DeepWorkTimer({ projects, tasks, onSessionRecorded }: DeepWorkTi
           setTotalFocusSeconds((data.totalFocusSeconds || 0) + deltaSeconds);
           setIsRunning(data.isRunning);
         }
+      } else {
+        setSecondsLeft(loadedSettings.workMinutes * 60);
       }
     } catch {
       // Ignore JSON error
@@ -144,12 +193,14 @@ export function DeepWorkTimer({ projects, tasks, onSessionRecorded }: DeepWorkTi
         isRunning,
         lastTimestamp: Date.now(),
         sessionStartedAt,
+        currentBlock,
+        completedBlocks,
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToStore));
     } catch {
       // Ignore
     }
-  }, [mode, pomodoroPhase, secondsLeft, stopwatchElapsed, totalFocusSeconds, isRunning, sessionStartedAt]);
+  }, [mode, pomodoroPhase, secondsLeft, stopwatchElapsed, totalFocusSeconds, isRunning, sessionStartedAt, currentBlock, completedBlocks]);
 
   useEffect(() => {
     saveStateToStorage();
@@ -162,10 +213,26 @@ export function DeepWorkTimer({ projects, tasks, onSessionRecorded }: DeepWorkTi
         if (mode === "pomodoro") {
           setSecondsLeft((prev) => {
             if (prev <= 1) {
-              clearInterval(timerRef.current!);
-              setIsRunning(false);
               playChime();
-              return 0;
+
+              if (pomodoroPhase === "work") {
+                setTotalFocusSeconds((tf) => tf + 1);
+                setCompletedBlocks((cb) => {
+                  const nextCompleted = cb + 1;
+                  if (nextCompleted >= pomodoroSettings.targetBlocks) {
+                    setGoalReached(true);
+                  }
+                  return nextCompleted;
+                });
+                // Switch to Break
+                setPomodoroPhase("break");
+                return pomodoroSettings.breakMinutes * 60;
+              } else {
+                // Break ended -> next work block
+                setCurrentBlock((b) => Math.min(pomodoroSettings.targetBlocks, b + 1));
+                setPomodoroPhase("work");
+                return pomodoroSettings.workMinutes * 60;
+              }
             }
             if (pomodoroPhase === "work") {
               setTotalFocusSeconds((tf) => tf + 1);
@@ -187,7 +254,7 @@ export function DeepWorkTimer({ projects, tasks, onSessionRecorded }: DeepWorkTi
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isRunning, mode, pomodoroPhase]);
+  }, [isRunning, mode, pomodoroPhase, pomodoroSettings]);
 
   // Actions
   const handleStart = () => {
@@ -204,13 +271,19 @@ export function DeepWorkTimer({ projects, tasks, onSessionRecorded }: DeepWorkTi
   const handleReset = () => {
     setIsRunning(false);
     if (mode === "pomodoro") {
-      setSecondsLeft(pomodoroPhase === "work" ? POMODORO_WORK_SECONDS : POMODORO_BREAK_SECONDS);
+      setSecondsLeft(pomodoroPhase === "work" ? pomodoroSettings.workMinutes * 60 : pomodoroSettings.breakMinutes * 60);
     } else {
       setStopwatchElapsed(0);
     }
     setTotalFocusSeconds(0);
     setSessionStartedAt(new Date().toISOString());
     localStorage.removeItem(STORAGE_KEY);
+  };
+
+  const handleResetBlocks = () => {
+    setCurrentBlock(1);
+    setCompletedBlocks(0);
+    setGoalReached(false);
   };
 
   const switchMode = (newMode: TimerMode) => {
@@ -221,7 +294,7 @@ export function DeepWorkTimer({ projects, tasks, onSessionRecorded }: DeepWorkTi
     setMode(newMode);
     if (newMode === "pomodoro") {
       setPomodoroPhase("work");
-      setSecondsLeft(POMODORO_WORK_SECONDS);
+      setSecondsLeft(pomodoroSettings.workMinutes * 60);
     } else {
       setStopwatchElapsed(0);
     }
@@ -232,7 +305,35 @@ export function DeepWorkTimer({ projects, tasks, onSessionRecorded }: DeepWorkTi
   const switchPomodoroPhase = (phase: PomodoroPhase) => {
     setIsRunning(false);
     setPomodoroPhase(phase);
-    setSecondsLeft(phase === "work" ? POMODORO_WORK_SECONDS : POMODORO_BREAK_SECONDS);
+    setSecondsLeft(phase === "work" ? pomodoroSettings.workMinutes * 60 : pomodoroSettings.breakMinutes * 60);
+  };
+
+  // Save Pomodoro Settings
+  const handleApplySettings = (work: number, brk: number, blocks: number) => {
+    const validWork = Math.max(1, Math.min(120, work));
+    const validBreak = Math.max(1, Math.min(60, brk));
+    const validBlocks = Math.max(1, Math.min(12, blocks));
+
+    const updated: PomodoroSettings = {
+      workMinutes: validWork,
+      breakMinutes: validBreak,
+      targetBlocks: validBlocks,
+    };
+
+    setPomodoroSettings(updated);
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(updated));
+    } catch {
+      // Ignore
+    }
+
+    if (!isRunning && mode === "pomodoro") {
+      setSecondsLeft(pomodoroPhase === "work" ? validWork * 60 : validBreak * 60);
+    }
+
+    setShowSettingsModal(false);
+    setSavedSettingsNotice(`Ajustes guardados (${validWork}m foco • ${validBreak}m descanso • ${validBlocks} blq)`);
+    setTimeout(() => setSavedSettingsNotice(null), 3500);
   };
 
   // Open Finish Modal
@@ -317,59 +418,134 @@ export function DeepWorkTimer({ projects, tasks, onSessionRecorded }: DeepWorkTi
             </h2>
           </div>
 
-          {/* Mode Tabs */}
-          <div className="flex items-center gap-1.5 p-1 bg-neutral-950/80 rounded-xl border border-neutral-800 w-fit">
-            <button
-              type="button"
-              onClick={() => switchMode("pomodoro")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
-                mode === "pomodoro"
-                  ? "bg-neutral-800 text-white shadow-sm"
-                  : "text-neutral-400 hover:text-neutral-200"
-              }`}
-            >
-              Pomodoro
-            </button>
-            <button
-              type="button"
-              onClick={() => switchMode("stopwatch")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
-                mode === "stopwatch"
-                  ? "bg-neutral-800 text-white shadow-sm"
-                  : "text-neutral-400 hover:text-neutral-200"
-              }`}
-            >
-              Cronómetro Libre
-            </button>
+          {/* Mode Tabs & Pomodoro Config Button */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1.5 p-1 bg-neutral-950/80 rounded-xl border border-neutral-800 w-fit">
+              <button
+                type="button"
+                onClick={() => switchMode("pomodoro")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                  mode === "pomodoro"
+                    ? "bg-neutral-800 text-white shadow-sm"
+                    : "text-neutral-400 hover:text-neutral-200"
+                }`}
+              >
+                Pomodoro
+              </button>
+              <button
+                type="button"
+                onClick={() => switchMode("stopwatch")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                  mode === "stopwatch"
+                    ? "bg-neutral-800 text-white shadow-sm"
+                    : "text-neutral-400 hover:text-neutral-200"
+                }`}
+              >
+                Cronómetro Libre
+              </button>
+            </div>
+
+            {mode === "pomodoro" && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setShowSettingsModal((prev) => !prev)}
+                  title="Configurar minutos y bloques de Pomodoro"
+                  className={`p-2 rounded-xl border transition flex items-center gap-1.5 text-xs ${
+                    showSettingsModal
+                      ? "bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-sm"
+                      : "bg-neutral-950/80 hover:bg-neutral-800 border-neutral-800 text-neutral-400 hover:text-amber-400"
+                  }`}
+                >
+                  <Settings2 className="w-3.5 h-3.5 text-amber-400" />
+                  <span className="font-medium">
+                    {showSettingsModal ? "Ocultar Ajustes" : "Ajustes"}
+                  </span>
+                </button>
+
+                {savedSettingsNotice && (
+                  <span className="text-[11px] font-medium text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-1 rounded-xl animate-in fade-in flex items-center gap-1">
+                    <Check className="w-3.5 h-3.5" />
+                    <span>{savedSettingsNotice}</span>
+                  </span>
+                )}
+              </>
+            )}
           </div>
 
-          {/* Pomodoro Work/Break Sub-tabs */}
+          {/* Pomodoro Work/Break Sub-tabs & Block Tracker */}
           {mode === "pomodoro" && (
-            <div className="flex items-center gap-2 pt-1">
-              <button
-                type="button"
-                onClick={() => switchPomodoroPhase("work")}
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition ${
-                  pomodoroPhase === "work"
-                    ? "bg-amber-500/15 text-amber-300 border-amber-500/30"
-                    : "bg-neutral-950 text-neutral-400 border-neutral-800 hover:text-neutral-200"
-                }`}
-              >
-                <Flame className="w-3.5 h-3.5 text-amber-400" />
-                <span>Enfoque (25 min)</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => switchPomodoroPhase("break")}
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition ${
-                  pomodoroPhase === "break"
-                    ? "bg-teal-500/15 text-teal-300 border-teal-500/30"
-                    : "bg-neutral-950 text-neutral-400 border-neutral-800 hover:text-neutral-200"
-                }`}
-              >
-                <Coffee className="w-3.5 h-3.5 text-teal-400" />
-                <span>Descanso (5 min)</span>
-              </button>
+            <div className="space-y-2 pt-1">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => switchPomodoroPhase("work")}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition ${
+                    pomodoroPhase === "work"
+                      ? "bg-amber-500/15 text-amber-300 border-amber-500/30"
+                      : "bg-neutral-950 text-neutral-400 border-neutral-800 hover:text-neutral-200"
+                  }`}
+                >
+                  <Flame className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Enfoque ({pomodoroSettings.workMinutes}m)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => switchPomodoroPhase("break")}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition ${
+                    pomodoroPhase === "break"
+                      ? "bg-teal-500/15 text-teal-300 border-teal-500/30"
+                      : "bg-neutral-950 text-neutral-400 border-neutral-800 hover:text-neutral-200"
+                  }`}
+                >
+                  <Coffee className="w-3.5 h-3.5 text-teal-400" />
+                  <span>Descanso ({pomodoroSettings.breakMinutes}m)</span>
+                </button>
+              </div>
+
+              {/* Block Progress Indicators */}
+              <div className="flex items-center gap-2 pt-0.5">
+                <div className="flex items-center gap-1.5">
+                  {Array.from({ length: pomodoroSettings.targetBlocks }).map((_, i) => (
+                    <div
+                      key={i}
+                      className={`w-3 h-3 rounded-full transition-all ${
+                        i < completedBlocks
+                          ? "bg-emerald-400 ring-2 ring-emerald-500/30 shadow-sm shadow-emerald-500/50"
+                          : i === currentBlock - 1 && isRunning && pomodoroPhase === "work"
+                          ? "bg-amber-400 animate-pulse ring-2 ring-amber-400/40"
+                          : "bg-neutral-800 border border-neutral-700"
+                      }`}
+                      title={`Bloque ${i + 1} de ${pomodoroSettings.targetBlocks}`}
+                    />
+                  ))}
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] text-neutral-400">
+                  <span className="font-semibold text-neutral-200">
+                    Bloque {Math.min(currentBlock, pomodoroSettings.targetBlocks)}/{pomodoroSettings.targetBlocks}
+                  </span>
+                  <span>•</span>
+                  <span>{completedBlocks} hechos</span>
+                  {completedBlocks > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleResetBlocks}
+                      title="Reiniciar conteo de bloques"
+                      className="text-[10px] text-neutral-500 hover:text-neutral-300 underline ml-1"
+                    >
+                      reiniciar
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Goal Reached Banner */}
+              {goalReached && (
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs animate-in fade-in">
+                  <Award className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>¡Objetivo de {pomodoroSettings.targetBlocks} bloques alcanzado! 🎉</span>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -430,9 +606,229 @@ export function DeepWorkTimer({ projects, tasks, onSessionRecorded }: DeepWorkTi
         </div>
       </div>
 
-      {/* Modal de Finalización y Registro de Sesión */}
-      {showFinishModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150">
+      {/* Panel de Configuración de Pomodoro Integrado */}
+      {showSettingsModal && (
+        <div className="mt-5 pt-5 border-t border-neutral-800 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="bg-neutral-950/80 border border-neutral-800/90 rounded-2xl p-4 sm:p-5 space-y-5">
+            {/* Header del panel */}
+            <div className="flex items-center justify-between border-b border-neutral-800/80 pb-3">
+              <div className="flex items-center gap-2">
+                <SlidersHorizontal className="w-4 h-4 text-amber-400" />
+                <h3 className="text-sm font-semibold text-white">
+                  Personalizar Pomodoro
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSettingsModal(false)}
+                aria-label="Cerrar ajustes"
+                className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition text-xs flex items-center gap-1"
+              >
+                <X className="w-4 h-4" />
+                <span className="text-[11px]">Cerrar</span>
+              </button>
+            </div>
+
+            {/* Presets Rápidos */}
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-neutral-400">
+                Presets recomendados (1-clic)
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSettingWorkMins(25);
+                    setSettingBreakMins(5);
+                    setSettingBlocks(4);
+                  }}
+                  className={`p-3 rounded-xl border text-left transition ${
+                    settingWorkMins === 25 && settingBreakMins === 5 && settingBlocks === 4
+                      ? "bg-amber-500/15 border-amber-500/40 text-amber-300 ring-1 ring-amber-500/30"
+                      : "bg-neutral-900 border-neutral-800 text-neutral-300 hover:bg-neutral-800/60"
+                  }`}
+                >
+                  <div className="font-semibold text-xs text-white">Clásico</div>
+                  <div className="text-[11px] text-neutral-400 mt-0.5">25m foco • 5m descanso • 4 bloques</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSettingWorkMins(50);
+                    setSettingBreakMins(10);
+                    setSettingBlocks(3);
+                  }}
+                  className={`p-3 rounded-xl border text-left transition ${
+                    settingWorkMins === 50 && settingBreakMins === 10 && settingBlocks === 3
+                      ? "bg-amber-500/15 border-amber-500/40 text-amber-300 ring-1 ring-amber-500/30"
+                      : "bg-neutral-900 border-neutral-800 text-neutral-300 hover:bg-neutral-800/60"
+                  }`}
+                >
+                  <div className="font-semibold text-xs text-white">Deep Focus</div>
+                  <div className="text-[11px] text-neutral-400 mt-0.5">50m foco • 10m descanso • 3 bloques</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSettingWorkMins(15);
+                    setSettingBreakMins(3);
+                    setSettingBlocks(6);
+                  }}
+                  className={`p-3 rounded-xl border text-left transition ${
+                    settingWorkMins === 15 && settingBreakMins === 3 && settingBlocks === 6
+                      ? "bg-amber-500/15 border-amber-500/40 text-amber-300 ring-1 ring-amber-500/30"
+                      : "bg-neutral-900 border-neutral-800 text-neutral-300 hover:bg-neutral-800/60"
+                  }`}
+                >
+                  <div className="font-semibold text-xs text-white">Sprint Ágil</div>
+                  <div className="text-[11px] text-neutral-400 mt-0.5">15m foco • 3m descanso • 6 bloques</div>
+                </button>
+              </div>
+            </div>
+
+            {/* Controles de Minutos y Bloques */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-3 border-t border-neutral-800/80">
+              {/* Minutos de Trabajo */}
+              <div className="p-3.5 rounded-xl bg-neutral-900/70 border border-neutral-800/80 space-y-2.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-neutral-300 font-medium flex items-center gap-1.5">
+                    <Flame className="w-3.5 h-3.5 text-amber-400" />
+                    Foco / Trabajo
+                  </span>
+                  <span className="font-bold text-amber-400 font-mono text-sm">{settingWorkMins} min</span>
+                </div>
+                <input
+                  type="range"
+                  min="5"
+                  max="90"
+                  step="5"
+                  value={settingWorkMins}
+                  onChange={(e) => setSettingWorkMins(Number(e.target.value))}
+                  className="w-full accent-amber-500 bg-neutral-950 rounded-lg cursor-pointer"
+                />
+                <div className="flex justify-between items-center text-[10px] text-neutral-500">
+                  <span>5m</span>
+                  <div className="flex gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setSettingWorkMins((v) => Math.max(5, v - 5))}
+                      className="px-2 py-0.5 rounded-md bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-mono"
+                    >-5m</button>
+                    <button
+                      type="button"
+                      onClick={() => setSettingWorkMins((v) => Math.min(90, v + 5))}
+                      className="px-2 py-0.5 rounded-md bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-mono"
+                    >+5m</button>
+                  </div>
+                  <span>90m</span>
+                </div>
+              </div>
+
+              {/* Minutos de Descanso */}
+              <div className="p-3.5 rounded-xl bg-neutral-900/70 border border-neutral-800/80 space-y-2.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-neutral-300 font-medium flex items-center gap-1.5">
+                    <Coffee className="w-3.5 h-3.5 text-teal-400" />
+                    Descanso
+                  </span>
+                  <span className="font-bold text-teal-400 font-mono text-sm">{settingBreakMins} min</span>
+                </div>
+                <input
+                  type="range"
+                  min="1"
+                  max="30"
+                  step="1"
+                  value={settingBreakMins}
+                  onChange={(e) => setSettingBreakMins(Number(e.target.value))}
+                  className="w-full accent-teal-500 bg-neutral-950 rounded-lg cursor-pointer"
+                />
+                <div className="flex justify-between items-center text-[10px] text-neutral-500">
+                  <span>1m</span>
+                  <div className="flex gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setSettingBreakMins((v) => Math.max(1, v - 1))}
+                      className="px-2 py-0.5 rounded-md bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-mono"
+                    >-1m</button>
+                    <button
+                      type="button"
+                      onClick={() => setSettingBreakMins((v) => Math.min(30, v + 1))}
+                      className="px-2 py-0.5 rounded-md bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-mono"
+                    >+1m</button>
+                  </div>
+                  <span>30m</span>
+                </div>
+              </div>
+
+              {/* Cantidad de Bloques */}
+              <div className="p-3.5 rounded-xl bg-neutral-900/70 border border-neutral-800/80 space-y-2.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-neutral-300 font-medium flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-indigo-400" />
+                    Meta de Bloques
+                  </span>
+                  <span className="font-bold text-indigo-400 font-mono text-sm">{settingBlocks} bloques</span>
+                </div>
+                <input
+                  type="range"
+                  min="1"
+                  max="10"
+                  step="1"
+                  value={settingBlocks}
+                  onChange={(e) => setSettingBlocks(Number(e.target.value))}
+                  className="w-full accent-indigo-500 bg-neutral-950 rounded-lg cursor-pointer"
+                />
+                <div className="flex justify-between items-center text-[10px] text-neutral-500">
+                  <span>1</span>
+                  <div className="flex gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setSettingBlocks((v) => Math.max(1, v - 1))}
+                      className="px-2 py-0.5 rounded-md bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-mono"
+                    >-1</button>
+                    <button
+                      type="button"
+                      onClick={() => setSettingBlocks((v) => Math.min(10, v + 1))}
+                      className="px-2 py-0.5 rounded-md bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-mono"
+                    >+1</button>
+                  </div>
+                  <span>10</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer con Botón Guardar Ajustes */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-neutral-800">
+              <span className="text-[11px] text-neutral-400">
+                Se guardará para todas tus sesiones futuras en este dispositivo.
+              </span>
+              <div className="flex items-center gap-2.5 self-end sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => setShowSettingsModal(false)}
+                  className="px-4 py-2.5 rounded-xl text-xs font-medium text-neutral-400 hover:text-white hover:bg-neutral-800 transition"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleApplySettings(settingWorkMins, settingBreakMins, settingBlocks)}
+                  className="px-6 py-2.5 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-neutral-950 shadow-lg shadow-amber-500/20 active:scale-95 transition flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Check className="w-4 h-4 stroke-[3]" />
+                  <span>Guardar Ajustes</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Finalización y Registro de Sesión renderizado via Portal para que nunca se corte */}
+      {mounted && showFinishModal && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
           <div 
             className="w-full max-w-lg bg-neutral-900 border border-neutral-800 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
@@ -562,7 +958,8 @@ export function DeepWorkTimer({ projects, tasks, onSessionRecorded }: DeepWorkTi
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </section>
   );

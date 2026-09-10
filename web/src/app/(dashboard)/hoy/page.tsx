@@ -186,19 +186,19 @@ export default function DailyHubPage() {
     <div className="min-h-screen bg-neutral-950 text-neutral-100 pb-24">
       {/* Header */}
       <header className="border-b border-neutral-800 bg-neutral-900/50 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href="/" className="p-2 -ml-2 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800 transition">
+        <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <Link href="/" className="p-2 -ml-2 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800 transition shrink-0">
               <ArrowLeft className="w-5 h-5" />
             </Link>
-            <div>
-              <h1 className="font-semibold text-base flex items-center gap-2">
-                Daily Hub
-                <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            <div className="min-w-0">
+              <h1 className="font-semibold text-sm sm:text-base flex items-center gap-2 truncate">
+                <span className="truncate">Daily Hub</span>
+                <span className="text-[10px] sm:text-xs font-normal px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
                   Hoy
                 </span>
               </h1>
-              <p className="text-xs text-neutral-400 capitalize">
+              <p className="text-xs text-neutral-400 capitalize truncate">
                 {new Date().toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })}
               </p>
             </div>
@@ -206,7 +206,8 @@ export default function DailyHubPage() {
 
           <Link 
             href="/habitos" 
-            className="p-2 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800 transition flex items-center gap-1.5 text-xs font-medium"
+            className="p-2 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800 transition flex items-center gap-1.5 text-xs font-medium shrink-0"
+            title="Gestionar Hábitos"
           >
             <Settings className="w-4 h-4" />
             <span className="hidden sm:inline">Gestionar Hábitos</span>

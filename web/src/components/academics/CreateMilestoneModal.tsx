@@ -67,9 +67,17 @@ export function CreateMilestoneModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!subjectId) {
-      setError("Debes seleccionar una materia.");
-      return;
+    const guidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+    if (!milestoneToEdit) {
+      if (!subjectId) {
+        setError("Debes seleccionar una materia.");
+        return;
+      }
+      if (!guidRegex.test(subjectId)) {
+        setError("La materia seleccionada no tiene un identificador válido. Asegúrate de tener materias guardadas en el sistema.");
+        return;
+      }
     }
     if (!title.trim()) {
       setError("El título de la evaluación es obligatorio.");
@@ -86,6 +94,10 @@ export function CreateMilestoneModal({
       return;
     }
 
+    const validReplacesId = replacesMilestoneId && guidRegex.test(replacesMilestoneId)
+      ? replacesMilestoneId
+      : undefined;
+
     try {
       setSaving(true);
       setError(null);
@@ -96,7 +108,7 @@ export function CreateMilestoneModal({
           milestoneType,
           dueDate,
           weightPercentage: weightNum,
-          replacesMilestoneId: replacesMilestoneId || undefined,
+          replacesMilestoneId: validReplacesId,
           notes: notes.trim() || undefined,
         };
         await onSubmit(payload, milestoneToEdit.id);
@@ -107,7 +119,7 @@ export function CreateMilestoneModal({
           milestoneType,
           dueDate,
           weightPercentage: weightNum,
-          replacesMilestoneId: replacesMilestoneId || undefined,
+          replacesMilestoneId: validReplacesId,
           notes: notes.trim() || undefined,
         };
         await onSubmit(payload);
@@ -161,25 +173,37 @@ export function CreateMilestoneModal({
             </div>
           )}
 
-          {/* Subject Selector (locked if defaultSubjectId is set and we're in subject view) */}
+          {/* Subject Selector or Empty Subjects Warning */}
           {!milestoneToEdit && (
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-neutral-300">
-                Materia <span className="text-rose-400">*</span>
-              </label>
-              <select
-                disabled={Boolean(defaultSubjectId)}
-                value={subjectId}
-                onChange={(e) => setSubjectId(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-neutral-200 text-sm focus:outline-none focus:border-indigo-500 transition disabled:opacity-75"
-              >
-                {subjects.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name} ({s.term})
-                  </option>
-                ))}
-              </select>
-            </div>
+            subjects.length === 0 ? (
+              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs space-y-1">
+                <p className="font-semibold flex items-center gap-1.5">
+                  <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                  No tienes materias registradas
+                </p>
+                <p className="text-neutral-400">
+                  Debes registrar al menos una materia antes de poder programar un examen o hito evaluativo.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-neutral-300">
+                  Materia <span className="text-rose-400">*</span>
+                </label>
+                <select
+                  disabled={Boolean(defaultSubjectId)}
+                  value={subjectId}
+                  onChange={(e) => setSubjectId(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-neutral-200 text-sm focus:outline-none focus:border-indigo-500 transition disabled:opacity-75"
+                >
+                  {subjects.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} ({s.term})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )
           )}
 
           {/* Title */}
@@ -297,7 +321,7 @@ export function CreateMilestoneModal({
             </button>
             <button
               type="submit"
-              disabled={saving}
+              disabled={saving || (!milestoneToEdit && subjects.length === 0)}
               className="px-5 py-2 rounded-xl text-xs font-semibold bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-600/20 disabled:opacity-50 transition flex items-center gap-1.5"
             >
               {saving ? "Guardando..." : milestoneToEdit ? "Actualizar Hito" : "Crear Hito"}

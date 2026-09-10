@@ -36,7 +36,7 @@ import { CreateMilestoneModal } from "@/components/academics/CreateMilestoneModa
 // Fallback demo data for static prerendering / offline preview
 const DEMO_SUBJECTS: AcademicSubject[] = [
   {
-    id: "subj-1",
+    id: "00000000-0000-0000-0000-000000000101",
     name: "Algoritmos y Estructuras de Datos",
     code: "COMP-201",
     term: "2026-1C",
@@ -48,7 +48,7 @@ const DEMO_SUBJECTS: AcademicSubject[] = [
     completedMilestones: 2,
   },
   {
-    id: "subj-2",
+    id: "00000000-0000-0000-0000-000000000102",
     name: "Sistemas Distribuidos & Cloud",
     code: "COMP-304",
     term: "2026-1C",
@@ -60,7 +60,7 @@ const DEMO_SUBJECTS: AcademicSubject[] = [
     completedMilestones: 1,
   },
   {
-    id: "subj-3",
+    id: "00000000-0000-0000-0000-000000000103",
     name: "Bases de Datos & Arquitectura",
     code: "BD-102",
     term: "2025-2C",
@@ -72,7 +72,7 @@ const DEMO_SUBJECTS: AcademicSubject[] = [
     completedMilestones: 3,
   },
   {
-    id: "subj-4",
+    id: "00000000-0000-0000-0000-000000000104",
     name: "Probabilidad & Estadística",
     code: "MAT-105",
     term: "2025-2C",
@@ -87,8 +87,8 @@ const DEMO_SUBJECTS: AcademicSubject[] = [
 
 const DEMO_MILESTONES: AcademicMilestone[] = [
   {
-    id: "m-1",
-    subjectId: "subj-1",
+    id: "00000000-0000-0000-0000-000000000201",
+    subjectId: "00000000-0000-0000-0000-000000000101",
     title: "Primer Parcial: Grafos y Árboles",
     milestoneType: "parcial",
     dueDate: new Date(Date.now() - 86400000 * 14).toISOString().split("T")[0],
@@ -98,8 +98,8 @@ const DEMO_MILESTONES: AcademicMilestone[] = [
     notes: "Excelente desarrollo de algoritmos Dijkstra y Floyd.",
   },
   {
-    id: "m-2",
-    subjectId: "subj-1",
+    id: "00000000-0000-0000-0000-000000000202",
+    subjectId: "00000000-0000-0000-0000-000000000101",
     title: "Entrega Trabajo Práctico Integrador",
     milestoneType: "entrega",
     dueDate: new Date(Date.now() - 86400000 * 2).toISOString().split("T")[0],
@@ -108,8 +108,8 @@ const DEMO_MILESTONES: AcademicMilestone[] = [
     status: "calificado",
   },
   {
-    id: "m-3",
-    subjectId: "subj-1",
+    id: "00000000-0000-0000-0000-000000000203",
+    subjectId: "00000000-0000-0000-0000-000000000101",
     title: "Segundo Parcial: Programación Dinámica",
     milestoneType: "parcial",
     dueDate: new Date(Date.now() + 86400000 * 5).toISOString().split("T")[0],
@@ -118,8 +118,8 @@ const DEMO_MILESTONES: AcademicMilestone[] = [
     notes: "Mochila 0/1, LCS y optimizaciones matriciales.",
   },
   {
-    id: "m-4",
-    subjectId: "subj-2",
+    id: "00000000-0000-0000-0000-000000000204",
+    subjectId: "00000000-0000-0000-0000-000000000102",
     title: "Parcial Teórico: Consenso Raft & Paxos",
     milestoneType: "parcial",
     dueDate: new Date(Date.now() - 86400000 * 7).toISOString().split("T")[0],
@@ -128,8 +128,8 @@ const DEMO_MILESTONES: AcademicMilestone[] = [
     status: "calificado",
   },
   {
-    id: "m-5",
-    subjectId: "subj-2",
+    id: "00000000-0000-0000-0000-000000000205",
+    subjectId: "00000000-0000-0000-0000-000000000102",
     title: "Entrega Final: Cluster Distribuido en Go",
     milestoneType: "entrega",
     dueDate: new Date(Date.now() + 86400000 * 12).toISOString().split("T")[0],
@@ -169,29 +169,40 @@ export default function AcademicsPage() {
     try {
       setLoading(true);
       const [fetchedSubjects, fetchedMetrics] = await Promise.all([
-        LifeTrackerApiClient.getSubjects(selectedTerm || undefined).catch(() => DEMO_SUBJECTS),
-        LifeTrackerApiClient.getAcademicMetrics().catch(() => DEMO_METRICS),
+        LifeTrackerApiClient.getSubjects(selectedTerm || undefined).catch((err) => {
+          console.warn("No se pudieron obtener las materias:", err);
+          return null;
+        }),
+        LifeTrackerApiClient.getAcademicMetrics().catch((err) => {
+          console.warn("No se pudieron obtener las métricas:", err);
+          return null;
+        }),
       ]);
 
-      setSubjects(fetchedSubjects.length > 0 ? fetchedSubjects : DEMO_SUBJECTS);
-      setMetrics(fetchedMetrics || DEMO_METRICS);
+      if (fetchedSubjects !== null) {
+        setSubjects(fetchedSubjects);
+      } else {
+        setSubjects(DEMO_SUBJECTS);
+      }
+
+      setMetrics(fetchedMetrics || null);
 
       // If a subject is selected, fetch its detail with milestones
       if (selectedSubject) {
         const detail = await LifeTrackerApiClient.getSubjectDetail(selectedSubject.id).catch(() => null);
         if (detail) {
           setSelectedSubject(detail);
-          setMilestones(detail.milestones);
+          setMilestones(detail.milestones || []);
         } else {
-          setMilestones(DEMO_MILESTONES.filter((m) => m.subjectId === selectedSubject.id));
+          setMilestones([]);
         }
       } else {
-        setMilestones(DEMO_MILESTONES);
+        setMilestones([]);
       }
     } catch {
-      setSubjects(DEMO_SUBJECTS);
-      setMilestones(DEMO_MILESTONES);
-      setMetrics(DEMO_METRICS);
+      setSubjects([]);
+      setMilestones([]);
+      setMetrics(null);
     } finally {
       setLoading(false);
     }
@@ -207,11 +218,9 @@ export default function AcademicsPage() {
     try {
       const detail = await LifeTrackerApiClient.getSubjectDetail(subject.id);
       setSelectedSubject(detail);
-      setMilestones(detail.milestones);
+      setMilestones(detail.milestones || []);
     } catch {
-      // Local fallback
-      const subjectMilestones = DEMO_MILESTONES.filter((m) => m.subjectId === subject.id);
-      setMilestones(subjectMilestones);
+      setMilestones([]);
     }
   };
 
@@ -227,36 +236,15 @@ export default function AcademicsPage() {
   ) => {
     if (subjectId) {
       // Update
-      try {
-        const updated = await LifeTrackerApiClient.updateSubject(subjectId, payload as UpdateAcademicSubjectPayload);
-        setSubjects((prev) => prev.map((s) => (s.id === subjectId ? updated : s)));
-        if (selectedSubject?.id === subjectId) {
-          setSelectedSubject((prev) => (prev ? { ...prev, ...updated } : null));
-        }
-      } catch {
-        setSubjects((prev) =>
-          prev.map((s) => (s.id === subjectId ? { ...s, ...payload } : s))
-        );
+      const updated = await LifeTrackerApiClient.updateSubject(subjectId, payload as UpdateAcademicSubjectPayload);
+      setSubjects((prev) => prev.map((s) => (s.id === subjectId ? updated : s)));
+      if (selectedSubject?.id === subjectId) {
+        setSelectedSubject((prev) => (prev ? { ...prev, ...updated } : null));
       }
     } else {
       // Create
-      try {
-        const created = await LifeTrackerApiClient.createSubject(payload as CreateAcademicSubjectPayload);
-        setSubjects((prev) => [...prev, created]);
-      } catch {
-        const newDemoSubject: AcademicSubject = {
-          id: `subj-${Date.now()}`,
-          name: payload.name,
-          code: payload.code,
-          term: payload.term,
-          professor: payload.professor,
-          status: payload.status || "en_curso",
-          color: payload.color || "indigo",
-          totalMilestones: 0,
-          completedMilestones: 0,
-        };
-        setSubjects((prev) => [...prev, newDemoSubject]);
-      }
+      const created = await LifeTrackerApiClient.createSubject(payload as CreateAcademicSubjectPayload);
+      setSubjects((prev) => [...prev, created]);
     }
   };
 
@@ -279,48 +267,17 @@ export default function AcademicsPage() {
   ) => {
     if (milestoneId) {
       // Update
-      try {
-        const updated = await LifeTrackerApiClient.updateMilestone(
-          milestoneId,
-          payload as UpdateAcademicMilestonePayload
-        );
-        setMilestones((prev) => prev.map((m) => (m.id === milestoneId ? updated : m)));
-      } catch {
-        setMilestones((prev) =>
-          prev.map((m) =>
-            m.id === milestoneId
-              ? {
-                  ...m,
-                  title: payload.title,
-                  milestoneType: payload.milestoneType,
-                  dueDate: payload.dueDate,
-                  weightPercentage: payload.weightPercentage,
-                  notes: payload.notes,
-                }
-              : m
-          )
-        );
-      }
+      const updated = await LifeTrackerApiClient.updateMilestone(
+        milestoneId,
+        payload as UpdateAcademicMilestonePayload
+      );
+      setMilestones((prev) => prev.map((m) => (m.id === milestoneId ? updated : m)));
     } else {
       // Create
-      try {
-        const created = await LifeTrackerApiClient.createMilestone(
-          payload as CreateAcademicMilestonePayload
-        );
-        setMilestones((prev) => [...prev, created]);
-      } catch {
-        const newDemoM: AcademicMilestone = {
-          id: `m-${Date.now()}`,
-          subjectId: (payload as CreateAcademicMilestonePayload).subjectId,
-          title: payload.title,
-          milestoneType: payload.milestoneType,
-          dueDate: payload.dueDate,
-          weightPercentage: payload.weightPercentage,
-          status: "pendiente",
-          notes: payload.notes,
-        };
-        setMilestones((prev) => [...prev, newDemoM]);
-      }
+      const created = await LifeTrackerApiClient.createMilestone(
+        payload as CreateAcademicMilestonePayload
+      );
+      setMilestones((prev) => [...prev, created]);
     }
     // Refresh subjects to update milestone counts
     LifeTrackerApiClient.getSubjects(selectedTerm || undefined)
@@ -387,26 +344,26 @@ export default function AcademicsPage() {
       {/* Top Header */}
       <header className="border-b border-neutral-800 bg-neutral-900/50 backdrop-blur-md sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             <Link
               href="/"
-              className="p-2 -ml-2 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800 transition"
+              className="p-2 -ml-2 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800 transition shrink-0"
               title="Volver al Inicio"
             >
               <ArrowLeft className="w-5 h-5" />
             </Link>
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-sky-500/10 text-sky-400 border border-sky-500/20 flex items-center justify-center">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-sky-500/10 text-sky-400 border border-sky-500/20 flex items-center justify-center shrink-0">
                 <GraduationCap className="w-4 h-4" />
               </div>
-              <div>
-                <h1 className="font-semibold text-base flex items-center gap-2">
-                  Academia & Universidad
-                  <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20">
+              <div className="min-w-0">
+                <h1 className="font-semibold text-sm sm:text-base flex items-center gap-2 truncate">
+                  <span className="truncate">Academia</span>
+                  <span className="hidden sm:inline-block text-[10px] font-medium px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20 shrink-0">
                     Materias & Exámenes
                   </span>
                 </h1>
-                <p className="text-xs text-neutral-400">
+                <p className="text-xs text-neutral-400 hidden sm:block truncate">
                   Seguimiento de cursadas, calendario evaluativo y notas ponderadas
                 </p>
               </div>
@@ -414,17 +371,17 @@ export default function AcademicsPage() {
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={() => {
                 setMilestoneToEdit(null);
                 setIsMilestoneModalOpen(true);
               }}
-              className="px-3 py-2 rounded-xl text-xs font-medium text-neutral-300 hover:text-white bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 transition flex items-center gap-1.5"
+              className="hidden sm:inline-flex px-3 py-2 rounded-xl text-xs font-medium text-neutral-300 hover:text-white bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 transition items-center gap-1.5 shrink-0"
             >
               <Plus className="w-3.5 h-3.5 text-purple-400" />
-              <span className="hidden sm:inline">Nuevo Hito</span>
+              <span>Nuevo Hito</span>
             </button>
 
             <button
@@ -433,10 +390,11 @@ export default function AcademicsPage() {
                 setSubjectToEdit(null);
                 setIsSubjectModalOpen(true);
               }}
-              className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-sky-600 hover:bg-sky-500 text-white shadow-lg shadow-sky-600/20 active:scale-95 transition flex items-center gap-1.5"
+              className="px-3 sm:px-3.5 py-2 rounded-xl text-xs font-semibold bg-sky-600 hover:bg-sky-500 text-white shadow-lg shadow-sky-600/20 active:scale-95 transition flex items-center gap-1.5 shrink-0 whitespace-nowrap"
             >
               <Plus className="w-4 h-4" />
-              <span>Nueva Materia</span>
+              <span className="hidden sm:inline">Nueva Materia</span>
+              <span className="sm:hidden">Materia</span>
             </button>
           </div>
         </div>
@@ -495,12 +453,25 @@ export default function AcademicsPage() {
           </div>
 
           {filteredSubjects.length === 0 ? (
-            <div className="p-12 rounded-2xl bg-neutral-900/40 border border-dashed border-neutral-800 text-center space-y-2">
+            <div className="p-12 rounded-2xl bg-neutral-900/40 border border-dashed border-neutral-800 text-center space-y-3">
               <BookOpen className="w-8 h-8 text-neutral-600 mx-auto" />
-              <p className="text-sm font-semibold text-neutral-300">No hay materias registradas</p>
-              <p className="text-xs text-neutral-500">
-                Registra tus materias para hacer el seguimiento de notas y evaluaciones.
-              </p>
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-neutral-300">No hay materias registradas</p>
+                <p className="text-xs text-neutral-500">
+                  Registra tus materias para hacer el seguimiento de notas y evaluaciones.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setSubjectToEdit(null);
+                  setIsSubjectModalOpen(true);
+                }}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-sky-600 hover:bg-sky-500 text-white shadow-lg shadow-sky-600/20 active:scale-95 transition"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Registrar mi primera materia</span>
+              </button>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

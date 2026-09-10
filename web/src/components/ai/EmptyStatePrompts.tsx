@@ -9,32 +9,32 @@ interface EmptyStatePromptsProps {
 
 const SUGGESTED_PROMPTS = [
   {
-    icon: BarChart2,
-    color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
-    title: "Correlación Hábitos & Salud",
-    prompt: "¿Cómo influyen mis hábitos en mi productividad y salud?",
-    description: "Analiza la constancia de tus rutinas con tus marcadores y estado de ánimo.",
+    icon: FileEdit,
+    color: "text-purple-400 bg-purple-500/10 border-purple-500/20",
+    title: "Escribir Nota de una Idea",
+    prompt: "Escribe una nota sobre esta idea: Arquitectura de agentes autónomos orientados a eventos para sincronizar módulos",
+    description: "Crea automáticamente una nota en tu Segundo Cerebro con título y tags.",
   },
   {
     icon: Target,
     color: "text-sky-400 bg-sky-500/10 border-sky-500/20",
-    title: "Tareas & Exámenes Pendientes",
-    prompt: "¿Qué tareas y exámenes tengo pendientes esta semana?",
-    description: "Consolida las entregas universitarias con tu tablero Kanban.",
+    title: "Agregar Hito / Entrega Académica",
+    prompt: "Tengo un Trabajo práctico para el jueves que viene de matemática, ¿lo podrias agregar como hito?",
+    description: "Calcula la fecha exacta e inserta la evaluación en la materia correspondiente.",
   },
   {
     icon: Zap,
     color: "text-amber-400 bg-amber-500/10 border-amber-500/20",
-    title: "Resumen Holístico de Hoy",
-    prompt: "Resumen holístico de mi día de hoy",
-    description: "Revisa check-in diario, hábitos cumplidos y eventos registrados.",
+    title: "Crear Tarea en Tablero Kanban",
+    prompt: "Crea una tarea en mi tablero de trabajo: 'Optimizar queries de base de datos con Span y ArrayPool' con prioridad alta",
+    description: "Registra la tarea directamente en tu columna 'Por Hacer' con prioridad asignada.",
   },
   {
-    icon: FileEdit,
-    color: "text-purple-400 bg-purple-500/10 border-purple-500/20",
-    title: "Acción Cruzada: Kanban + Notas",
-    prompt: "Crear una tarea en el Kanban y una nota rápida para mi próximo proyecto",
-    description: "Pídele a Gemini que coordine acciones en múltiples módulos.",
+    icon: BarChart2,
+    color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+    title: "Correlación Hábitos & Salud",
+    prompt: "¿Cómo influyen mis hábitos en mi productividad y salud esta semana?",
+    description: "Analiza la constancia de tus rutinas con tus marcadores y tiempo de foco.",
   },
 ];
 

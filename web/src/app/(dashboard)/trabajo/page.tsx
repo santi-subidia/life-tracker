@@ -33,7 +33,7 @@ import { ProjectManagerModal } from "@/components/work/ProjectManagerModal";
 // Fallback initial data for static prerendering / offline demo
 const DEMO_PROJECTS: WorkProject[] = [
   {
-    id: "proj-1",
+    id: "00000000-0000-0000-0000-000000000301",
     name: "Life Tracker Core",
     description: "Plataforma web con .NET 10 y Next.js 16",
     status: "active",
@@ -43,7 +43,7 @@ const DEMO_PROJECTS: WorkProject[] = [
     createdAt: new Date().toISOString(),
   },
   {
-    id: "proj-2",
+    id: "00000000-0000-0000-0000-000000000302",
     name: "Segundo Cerebro",
     description: "Sistema de grafos y notas Markdown",
     status: "active",
@@ -56,8 +56,8 @@ const DEMO_PROJECTS: WorkProject[] = [
 
 const DEMO_TASKS: WorkTask[] = [
   {
-    id: "task-1",
-    projectId: "proj-1",
+    id: "00000000-0000-0000-0000-000000000401",
+    projectId: "00000000-0000-0000-0000-000000000301",
     projectName: "Life Tracker Core",
     projectColor: "indigo",
     title: "Optimizar consultas EF Core en endpoints de trabajo",
@@ -70,8 +70,8 @@ const DEMO_TASKS: WorkTask[] = [
     updatedAt: new Date().toISOString(),
   },
   {
-    id: "task-2",
-    projectId: "proj-1",
+    id: "00000000-0000-0000-0000-000000000402",
+    projectId: "00000000-0000-0000-0000-000000000301",
     projectName: "Life Tracker Core",
     projectColor: "indigo",
     title: "Diseñar tarjeta accesible con soporte táctil para móvil",
@@ -84,8 +84,8 @@ const DEMO_TASKS: WorkTask[] = [
     updatedAt: new Date().toISOString(),
   },
   {
-    id: "task-3",
-    projectId: "proj-2",
+    id: "00000000-0000-0000-0000-000000000403",
+    projectId: "00000000-0000-0000-0000-000000000302",
     projectName: "Segundo Cerebro",
     projectColor: "amber",
     title: "Simulación Canvas 2D a 60 FPS para notas",
@@ -98,8 +98,8 @@ const DEMO_TASKS: WorkTask[] = [
     updatedAt: new Date().toISOString(),
   },
   {
-    id: "task-4",
-    projectId: "proj-1",
+    id: "00000000-0000-0000-0000-000000000404",
+    projectId: "00000000-0000-0000-0000-000000000301",
     projectName: "Life Tracker Core",
     projectColor: "indigo",
     title: "Implementar DTOs y Servicios de Dominio en .NET 10",
@@ -138,18 +138,22 @@ export default function WorkDashboardPage() {
     try {
       setLoading(true);
       const [fetchedProjects, fetchedTasks, fetchedMetrics] = await Promise.all([
-        LifeTrackerApiClient.getProjects().catch(() => DEMO_PROJECTS),
-        LifeTrackerApiClient.getTasks().catch(() => DEMO_TASKS),
-        LifeTrackerApiClient.getWorkMetrics().catch(() => DEMO_METRICS),
+        LifeTrackerApiClient.getProjects().catch(() => null),
+        LifeTrackerApiClient.getTasks().catch(() => null),
+        LifeTrackerApiClient.getWorkMetrics().catch(() => null),
       ]);
 
-      setProjects(fetchedProjects.length > 0 ? fetchedProjects : DEMO_PROJECTS);
-      setTasks(fetchedTasks.length > 0 ? fetchedTasks : DEMO_TASKS);
-      setMetrics(fetchedMetrics || DEMO_METRICS);
+      if (fetchedProjects !== null) setProjects(fetchedProjects);
+      else setProjects(DEMO_PROJECTS);
+
+      if (fetchedTasks !== null) setTasks(fetchedTasks);
+      else setTasks(DEMO_TASKS);
+
+      setMetrics(fetchedMetrics || null);
     } catch {
-      setProjects(DEMO_PROJECTS);
-      setTasks(DEMO_TASKS);
-      setMetrics(DEMO_METRICS);
+      setProjects([]);
+      setTasks([]);
+      setMetrics(null);
     } finally {
       setLoading(false);
     }
@@ -320,26 +324,26 @@ export default function WorkDashboardPage() {
       {/* Top Header */}
       <header className="border-b border-neutral-800 bg-neutral-900/50 backdrop-blur-md sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             <Link
               href="/"
-              className="p-2 -ml-2 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800 transition"
+              className="p-2 -ml-2 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800 transition shrink-0"
               title="Volver al Inicio"
             >
               <ArrowLeft className="w-5 h-5" />
             </Link>
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center justify-center">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center justify-center shrink-0">
                 <Briefcase className="w-4 h-4" />
               </div>
-              <div>
-                <h1 className="font-semibold text-base flex items-center gap-2">
-                  Trabajo & Foco
-                  <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+              <div className="min-w-0">
+                <h1 className="font-semibold text-sm sm:text-base flex items-center gap-2 truncate">
+                  <span className="truncate">Trabajo & Foco</span>
+                  <span className="hidden sm:inline-block text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 shrink-0">
                     Kanban + Deep Work
                   </span>
                 </h1>
-                <p className="text-xs text-neutral-400">
+                <p className="text-xs text-neutral-400 hidden sm:block truncate">
                   Organización ágil de proyectos y bloques de alta concentración
                 </p>
               </div>
@@ -347,11 +351,12 @@ export default function WorkDashboardPage() {
           </div>
 
           {/* Quick Action Buttons */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={() => setIsProjectModalOpen(true)}
-              className="px-3 py-2 rounded-xl text-xs font-medium text-neutral-300 hover:text-white bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 transition flex items-center gap-1.5"
+              className="px-2.5 sm:px-3 py-2 rounded-xl text-xs font-medium text-neutral-300 hover:text-white bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 transition flex items-center gap-1.5 shrink-0"
+              title="Gestionar proyectos"
             >
               <Settings className="w-3.5 h-3.5 text-neutral-400" />
               <span className="hidden sm:inline">Proyectos</span>
@@ -364,10 +369,11 @@ export default function WorkDashboardPage() {
                 setDefaultTaskStatus("todo");
                 setIsTaskModalOpen(true);
               }}
-              className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/20 active:scale-95 transition flex items-center gap-1.5"
+              className="px-3 sm:px-3.5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/20 active:scale-95 transition flex items-center gap-1.5 shrink-0 whitespace-nowrap"
             >
               <Plus className="w-4 h-4" />
-              <span>Nueva Tarea</span>
+              <span className="hidden sm:inline">Nueva Tarea</span>
+              <span className="sm:hidden">Tarea</span>
             </button>
           </div>
         </div>

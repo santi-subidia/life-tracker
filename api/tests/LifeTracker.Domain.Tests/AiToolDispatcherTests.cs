@@ -2,6 +2,8 @@ using LifeTracker.Application.Academics.Dtos;
 using LifeTracker.Application.Academics.Services;
 using LifeTracker.Application.Ai.Services;
 using LifeTracker.Application.Common.Interfaces;
+using LifeTracker.Application.Finances.Dtos;
+using LifeTracker.Application.Finances.Services;
 using LifeTracker.Application.Habits.Dtos;
 using LifeTracker.Application.Habits.Services;
 using LifeTracker.Application.Health.Dtos;
@@ -25,6 +27,7 @@ public class AiToolDispatcherTests
     private readonly StubHealthService _healthService = new();
     private readonly StubAcademicService _academicService = new();
     private readonly StubDailyHubService _dailyHubService = new();
+    private readonly StubFinanceService _financeService = new();
 
     private AiToolDispatcher CreateDispatcher()
     {
@@ -35,17 +38,18 @@ public class AiToolDispatcherTests
             _workService,
             _academicService,
             _dailyHubService,
+            _financeService,
             null!
         );
     }
 
     [Fact]
-    public void GetAvailableToolDefinitions_ShouldReturnAllTenTools()
+    public void GetAvailableToolDefinitions_ShouldReturnAllTwelveTools()
     {
         var dispatcher = CreateDispatcher();
         var tools = dispatcher.GetAvailableToolDefinitions();
 
-        Assert.Equal(10, tools.Count);
+        Assert.Equal(12, tools.Count);
         Assert.Contains(tools, t => t.Name == "get_health_summary");
         Assert.Contains(tools, t => t.Name == "get_habits_status");
         Assert.Contains(tools, t => t.Name == "search_notes");
@@ -56,6 +60,8 @@ public class AiToolDispatcherTests
         Assert.Contains(tools, t => t.Name == "create_work_task");
         Assert.Contains(tools, t => t.Name == "create_quick_note");
         Assert.Contains(tools, t => t.Name == "create_academic_milestone");
+        Assert.Contains(tools, t => t.Name == "get_finance_summary");
+        Assert.Contains(tools, t => t.Name == "log_finance_transaction");
     }
 
     [Fact]
@@ -164,6 +170,56 @@ public class AiToolDispatcherTests
 
         Assert.False(result.Success);
         Assert.Contains("requerido", result.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task DispatchAsync_GetFinanceSummary_ShouldReturnSegregatedCashflowAndAccounts()
+    {
+        var dispatcher = CreateDispatcher();
+        var userId = Guid.NewGuid();
+
+        var request = new AiToolCallRequest(
+            CallId: "call-fin-1",
+            ToolName: "get_finance_summary",
+            Arguments: new Dictionary<string, object?>
+            {
+                ["month"] = 9,
+                ["year"] = 2026
+            }
+        );
+
+        var result = await dispatcher.DispatchAsync(userId, request);
+
+        Assert.True(result.Success);
+        Assert.NotNull(result.Data);
+    }
+
+    [Fact]
+    public async Task DispatchAsync_LogFinanceTransaction_ShouldCreateTransactionAndReturnNewBalance()
+    {
+        var dispatcher = CreateDispatcher();
+        var userId = Guid.NewGuid();
+
+        var request = new AiToolCallRequest(
+            CallId: "call-fin-2",
+            ToolName: "log_finance_transaction",
+            Arguments: new Dictionary<string, object?>
+            {
+                ["accountName"] = "Mercado Pago",
+                ["type"] = "expense",
+                ["amount"] = 4500m,
+                ["description"] = "Almuerzo rápido",
+                ["categoryName"] = "Alimentación"
+            }
+        );
+
+        var result = await dispatcher.DispatchAsync(userId, request);
+
+        Assert.True(result.Success);
+        Assert.NotNull(result.Data);
+        Assert.NotNull(_financeService.LastCreateTransactionRequest);
+        Assert.Equal(4500m, _financeService.LastCreateTransactionRequest.Amount);
+        Assert.Equal("Almuerzo rápido", _financeService.LastCreateTransactionRequest.Description);
     }
 
     #region Stubs para pruebas unitarias
@@ -280,6 +336,73 @@ public class AiToolDispatcherTests
 
         public Task<DailyLogDto> UpdateDailyLogTodayAsync(Guid userId, UpdateDailyLogRequest request, CancellationToken cancellationToken = default) =>
             throw new NotImplementedException();
+    }
+
+    private class StubFinanceService : IFinanceService
+    {
+        public List<FinancialAccountDto> Accounts { get; } = new()
+        {
+            new(Guid.Parse("11111111-1111-1111-1111-111111111111"), Guid.NewGuid(), "Mercado Pago", Domain.Finances.AccountType.DigitalWallet, "ARS", 50000m, 50000m, "blue", "wallet", false, DateTime.UtcNow, DateTime.UtcNow)
+        };
+
+        public CreateTransactionRequest? LastCreateTransactionRequest { get; private set; }
+
+        public Task<IReadOnlyList<FinancialAccountDto>> GetAccountsAsync(Guid userId, bool includeArchived = false, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<FinancialAccountDto>>(Accounts);
+
+        public Task<FinancialAccountDto?> GetAccountByIdAsync(Guid userId, Guid id, CancellationToken ct = default) =>
+            Task.FromResult(Accounts.FirstOrDefault(a => a.Id == id));
+
+        public Task<FinancialAccountDto> CreateAccountAsync(Guid userId, CreateFinancialAccountRequest request, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<FinancialAccountDto?> UpdateAccountAsync(Guid userId, Guid id, UpdateFinancialAccountRequest request, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<bool> DeleteAccountAsync(Guid userId, Guid id, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<bool> ArchiveAccountAsync(Guid userId, Guid id, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<bool> RestoreAccountAsync(Guid userId, Guid id, CancellationToken ct = default) => throw new NotImplementedException();
+
+        public Task<IReadOnlyList<TransactionCategoryDto>> GetCategoriesAsync(Guid userId, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<TransactionCategoryDto>>(new List<TransactionCategoryDto>
+            {
+                new(Guid.NewGuid(), userId, "Alimentación", Domain.Finances.CategoryType.Expense, "emerald", "utensils", true, 1, DateTime.UtcNow)
+            });
+
+        public Task<TransactionCategoryDto> CreateCategoryAsync(Guid userId, CreateTransactionCategoryRequest request, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<TransactionCategoryDto?> UpdateCategoryAsync(Guid userId, Guid id, UpdateTransactionCategoryRequest request, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<bool> DeleteCategoryAsync(Guid userId, Guid id, CancellationToken ct = default) => throw new NotImplementedException();
+
+        public Task<IReadOnlyList<TransactionDto>> GetTransactionsAsync(Guid userId, TransactionFilterRequest filter, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<TransactionDto>>(new List<TransactionDto>());
+
+        public Task<TransactionDto?> GetTransactionByIdAsync(Guid userId, Guid id, CancellationToken ct = default) => throw new NotImplementedException();
+
+        public Task<TransactionDto> CreateTransactionAsync(Guid userId, CreateTransactionRequest request, CancellationToken ct = default)
+        {
+            LastCreateTransactionRequest = request;
+            var acc = Accounts.First(a => a.Id == request.AccountId);
+            return Task.FromResult(new TransactionDto(
+                Guid.NewGuid(), userId, request.AccountId, acc.Name, acc.Currency,
+                request.DestinationAccountId, null, null, request.CategoryId, "Alimentación", "emerald", "utensils",
+                request.Type, request.Amount, request.DestinationAmount, request.ExchangeRate,
+                request.Date ?? DateOnly.FromDateTime(DateTime.UtcNow),
+                DateTimeOffset.UtcNow, request.Description, request.Notes, request.Tags ?? [], request.IsCleared,
+                DateTime.UtcNow, DateTime.UtcNow
+            ));
+        }
+
+        public Task<TransactionDto?> UpdateTransactionAsync(Guid userId, Guid id, UpdateTransactionRequest request, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<bool> DeleteTransactionAsync(Guid userId, Guid id, CancellationToken ct = default) => throw new NotImplementedException();
+
+        public Task<IReadOnlyList<BudgetExecutionDto>> GetBudgetsAsync(Guid userId, int month, int year, string? currency = null, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<BudgetExecutionDto>>(new List<BudgetExecutionDto>());
+
+        public Task<BudgetExecutionDto> CreateOrUpdateBudgetAsync(Guid userId, CreateOrUpdateBudgetRequest request, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<bool> DeleteBudgetAsync(Guid userId, Guid id, CancellationToken ct = default) => throw new NotImplementedException();
+
+        public Task<CashflowSummaryDto> GetCashflowSummaryAsync(Guid userId, int? month = null, int? year = null, CancellationToken ct = default)
+        {
+            var ars = new CurrencyCashflowSummaryDto("ARS", 50000m, 120000m, 45000m, 75000m, 62.5m, []);
+            var usd = new CurrencyCashflowSummaryDto("USD", 1500m, 0m, 0m, 0m, 0m, []);
+            return Task.FromResult(new CashflowSummaryDto(month ?? 9, year ?? 2026, ars, usd, []));
+        }
     }
     #endregion
 }

@@ -55,10 +55,13 @@ else
 }
 
 builder.Services.AddAuthorization();
+builder.Services.AddProblemDetails();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+
+app.UseExceptionHandler();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -88,6 +91,8 @@ app.MapNoteEndpoints();
 app.MapWorkEndpoints();
 app.MapAcademicEndpoints();
 app.MapAiEndpoints();
+app.MapProfileEndpoints();
+app.MapFinanceEndpoints();
 
 // Aplicar migraciones pendientes de EF Core automáticamente en la base de datos
 using (var scope = app.Services.CreateScope())

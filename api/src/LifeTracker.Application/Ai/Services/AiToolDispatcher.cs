@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using LifeTracker.Application.Academics.Dtos;
 using LifeTracker.Application.Academics.Services;
 using LifeTracker.Application.Common.Interfaces;
+using LifeTracker.Application.Finances.Dtos;
+using LifeTracker.Application.Finances.Services;
 using LifeTracker.Application.Habits.Dtos;
 using LifeTracker.Application.Habits.Services;
 using LifeTracker.Application.Health.Services;
@@ -11,7 +13,9 @@ using LifeTracker.Application.Notes.Services;
 using LifeTracker.Application.Timeline.Services;
 using LifeTracker.Application.Work.Dtos;
 using LifeTracker.Application.Work.Services;
+using LifeTracker.Domain.Academics;
 using LifeTracker.Domain.Ai;
+using LifeTracker.Domain.Finances;
 
 namespace LifeTracker.Application.Ai.Services;
 
@@ -23,6 +27,7 @@ public class AiToolDispatcher : IAiToolDispatcher
     private readonly IWorkService _workService;
     private readonly IAcademicService _academicService;
     private readonly IDailyHubService _dailyHubService;
+    private readonly IFinanceService _financeService;
     private readonly ILifeTrackerDbContext _dbContext;
 
     private static readonly List<AiToolCallDefinition> AvailableTools =
@@ -156,13 +161,51 @@ public class AiToolDispatcher : IAiToolDispatcher
                 type = "OBJECT",
                 properties = new
                 {
-                    subjectId = new { type = "STRING", description = "UUID de la materia a la que pertenece el examen." },
-                    title = new { type = "STRING", description = "Título de la evaluación (ej: 'Primer Parcial')." },
+                    subjectId = new { type = "STRING", description = "UUID opcional de la materia a la que pertenece el examen." },
+                    subjectName = new { type = "STRING", description = "Nombre de la materia si no se cuenta con el UUID (ej: 'Matemática', 'Algoritmos')." },
+                    title = new { type = "STRING", description = "Título de la evaluación o hito (ej: 'Primer Parcial', 'Trabajo Práctico 1')." },
                     milestoneType = new { type = "STRING", description = "Tipo de evaluación: parcial, entrega, final, recuperatorio." },
-                    dueDate = new { type = "STRING", description = "Fecha del examen en formato YYYY-MM-DD." },
+                    dueDate = new { type = "STRING", description = "Fecha del examen o entrega en formato YYYY-MM-DD." },
                     weightPercentage = new { type = "NUMBER", description = "Ponderación porcentual opcional sobre la nota final (ej: 40.0)." }
                 },
-                required = new[] { "subjectId", "title", "milestoneType", "dueDate" }
+                required = new[] { "title", "milestoneType", "dueDate" }
+            }
+        ),
+        new(
+            "get_finance_summary",
+            "Consulta el saldo consolidado de liquidez en ARS y USD, cuentas financieras activas y el flujo de caja (ingresos, gastos, ahorro) del mes.",
+            new
+            {
+                type = "OBJECT",
+                properties = new
+                {
+                    month = new { type = "INTEGER", description = "Mes calendario a consultar (1 a 12). Opcional, mes actual por defecto." },
+                    year = new { type = "INTEGER", description = "Año calendario a consultar (ej: 2026). Opcional, año actual por defecto." }
+                }
+            }
+        ),
+        new(
+            "log_finance_transaction",
+            "Registra un movimiento financiero (gasto, ingreso o transferencia) indicando cuenta, monto, categoría y descripción.",
+            new
+            {
+                type = "OBJECT",
+                properties = new
+                {
+                    accountName = new { type = "STRING", description = "Nombre o aproximación de la cuenta de origen (ej: 'Mercado Pago', 'Galicia', 'Efectivo')." },
+                    accountId = new { type = "STRING", description = "UUID opcional de la cuenta de origen si se conoce." },
+                    type = new { type = "STRING", description = "Tipo de movimiento: expense (gasto), income (ingreso) o transfer (transferencia)." },
+                    amount = new { type = "NUMBER", description = "Monto de la transacción." },
+                    description = new { type = "STRING", description = "Detalle, concepto o comercio del movimiento (ej: 'Almuerzo', 'Pago de sueldo', 'Supermercado')." },
+                    categoryName = new { type = "STRING", description = "Nombre de la categoría (ej: 'Alimentación', 'Transporte', 'Servicios', 'Sueldo')." },
+                    destinationAccountName = new { type = "STRING", description = "Nombre de la cuenta de destino (para transferencias)." },
+                    destinationAccountId = new { type = "STRING", description = "UUID de la cuenta de destino (para transferencias)." },
+                    destinationAmount = new { type = "NUMBER", description = "Monto a acreditar en la cuenta de destino (para transferencias bimonetarias)." },
+                    exchangeRate = new { type = "NUMBER", description = "Tipo de cambio pactado (para transferencias bimonetarias)." },
+                    date = new { type = "STRING", description = "Fecha de la transacción en formato YYYY-MM-DD (opcional, hoy por defecto)." },
+                    notes = new { type = "STRING", description = "Notas o aclaraciones adicionales sobre la transacción." }
+                },
+                required = new[] { "amount", "description" }
             }
         )
     ];
@@ -174,6 +217,7 @@ public class AiToolDispatcher : IAiToolDispatcher
         IWorkService workService,
         IAcademicService academicService,
         IDailyHubService dailyHubService,
+        IFinanceService financeService,
         ILifeTrackerDbContext dbContext)
     {
         _healthService = healthService;
@@ -182,6 +226,7 @@ public class AiToolDispatcher : IAiToolDispatcher
         _workService = workService;
         _academicService = academicService;
         _dailyHubService = dailyHubService;
+        _financeService = financeService;
         _dbContext = dbContext;
     }
 
@@ -361,17 +406,198 @@ public class AiToolDispatcher : IAiToolDispatcher
                 case "create_academic_milestone":
                 {
                     var subjectId = GetGuid(args, "subjectId");
+                    var subjectName = GetString(args, "subjectName") ?? GetString(args, "subject");
                     var title = GetString(args, "title");
-                    var milestoneType = GetString(args, "milestoneType") ?? "parcial";
+                    var milestoneType = GetString(args, "milestoneType") ?? "entrega";
                     var dueDate = GetDateOnly(args, "dueDate");
                     var weight = GetDecimal(args, "weightPercentage");
 
-                    if (!subjectId.HasValue || string.IsNullOrWhiteSpace(title) || !dueDate.HasValue)
-                        return new AiToolExecutionResult(request.CallId, request.ToolName, false, null, "subjectId, title y dueDate son requeridos.");
+                    if (string.IsNullOrWhiteSpace(title) || !dueDate.HasValue)
+                        return new AiToolExecutionResult(request.CallId, request.ToolName, false, null, "Los parámetros 'title' y 'dueDate' son requeridos.");
+
+                    // Si no vino subjectId válido, resolver por subjectName o buscar la materia
+                    if (!subjectId.HasValue)
+                    {
+                        if (string.IsNullOrWhiteSpace(subjectName))
+                        {
+                            var rawSubject = GetString(args, "subjectId");
+                            if (!string.IsNullOrWhiteSpace(rawSubject) && !Guid.TryParse(rawSubject, out _))
+                            {
+                                subjectName = rawSubject;
+                            }
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(subjectName))
+                        {
+                            var cleanName = subjectName.Trim().ToLowerInvariant();
+                            var existingSubject = await _dbContext.AcademicSubjects
+                                .FirstOrDefaultAsync(s => s.UserId == userId && s.Name.ToLower().Contains(cleanName), ct);
+
+                            if (existingSubject != null)
+                            {
+                                subjectId = existingSubject.Id;
+                            }
+                            else
+                            {
+                                // Crear la materia automáticamente para que la acción nunca falle
+                                var newSub = new AcademicSubject(userId, subjectName.Trim(), "Actual", null, null, Domain.Academics.SubjectStatus.EnCurso, "#6366f1");
+                                _dbContext.AcademicSubjects.Add(newSub);
+                                await _dbContext.SaveChangesAsync(ct);
+                                subjectId = newSub.Id;
+                            }
+                        }
+                        else
+                        {
+                            var firstSubject = await _dbContext.AcademicSubjects
+                                .FirstOrDefaultAsync(s => s.UserId == userId, ct);
+
+                            if (firstSubject != null)
+                            {
+                                subjectId = firstSubject.Id;
+                            }
+                            else
+                            {
+                                var defaultSub = new AcademicSubject(userId, "Facultad / Universidad", "Actual", null, null, Domain.Academics.SubjectStatus.EnCurso, "#6366f1");
+                                _dbContext.AcademicSubjects.Add(defaultSub);
+                                await _dbContext.SaveChangesAsync(ct);
+                                subjectId = defaultSub.Id;
+                            }
+                        }
+                    }
 
                     var req = new CreateAcademicMilestoneRequest(subjectId.Value, title, milestoneType, dueDate.Value, weight, null, null);
                     var milestone = await _academicService.CreateMilestoneAsync(userId, req, ct);
                     return new AiToolExecutionResult(request.CallId, request.ToolName, true, milestone);
+                }
+
+                case "get_finance_summary":
+                {
+                    var month = GetInt(args, "month");
+                    var year = GetInt(args, "year");
+
+                    var accounts = await _financeService.GetAccountsAsync(userId, includeArchived: false, ct);
+                    var summary = await _financeService.GetCashflowSummaryAsync(userId, month, year, ct);
+
+                    return new AiToolExecutionResult(request.CallId, request.ToolName, true, new
+                    {
+                        month = summary.Month,
+                        year = summary.Year,
+                        ars = new
+                        {
+                            summary.Ars.TotalLiquidity,
+                            summary.Ars.TotalIncome,
+                            summary.Ars.TotalExpense,
+                            summary.Ars.NetSavings,
+                            summary.Ars.SavingsRatePercentage,
+                            topExpenses = summary.Ars.ExpensesByCategory.Take(5)
+                        },
+                        usd = new
+                        {
+                            summary.Usd.TotalLiquidity,
+                            summary.Usd.TotalIncome,
+                            summary.Usd.TotalExpense,
+                            summary.Usd.NetSavings,
+                            summary.Usd.SavingsRatePercentage,
+                            topExpenses = summary.Usd.ExpensesByCategory.Take(5)
+                        },
+                        accounts = accounts.Select(a => new
+                        {
+                            a.Id,
+                            a.Name,
+                            Type = a.AccountType.ToString(),
+                            a.Currency,
+                            a.CurrentBalance
+                        })
+                    });
+                }
+
+                case "log_finance_transaction":
+                {
+                    var amount = GetDecimal(args, "amount") ?? 0m;
+                    if (amount <= 0)
+                        return new AiToolExecutionResult(request.CallId, request.ToolName, false, null, "El monto debe ser mayor a cero.");
+
+                    var description = GetString(args, "description");
+                    if (string.IsNullOrWhiteSpace(description))
+                        return new AiToolExecutionResult(request.CallId, request.ToolName, false, null, "La descripción es requerida.");
+
+                    var typeStr = (GetString(args, "type") ?? "expense").Trim().ToLowerInvariant();
+                    var type = typeStr switch
+                    {
+                        "income" => TransactionType.Income,
+                        "transfer" => TransactionType.Transfer,
+                        _ => TransactionType.Expense
+                    };
+
+                    var accounts = await _financeService.GetAccountsAsync(userId, includeArchived: false, ct);
+                    if (accounts.Count == 0)
+                        return new AiToolExecutionResult(request.CallId, request.ToolName, false, null, "El usuario no tiene cuentas financieras registradas.");
+
+                    var accountId = GetGuid(args, "accountId");
+                    var accountName = GetString(args, "accountName");
+                    FinancialAccountDto? sourceAccount = null;
+
+                    if (accountId.HasValue)
+                        sourceAccount = accounts.FirstOrDefault(a => a.Id == accountId.Value);
+                    if (sourceAccount == null && !string.IsNullOrWhiteSpace(accountName))
+                        sourceAccount = accounts.FirstOrDefault(a => a.Name.Contains(accountName, StringComparison.OrdinalIgnoreCase));
+                    sourceAccount ??= accounts.First();
+
+                    Guid? destinationAccountId = GetGuid(args, "destinationAccountId");
+                    var destAccountName = GetString(args, "destinationAccountName");
+                    if (type == TransactionType.Transfer)
+                    {
+                        if (!destinationAccountId.HasValue && !string.IsNullOrWhiteSpace(destAccountName))
+                        {
+                            var dest = accounts.FirstOrDefault(a => a.Name.Contains(destAccountName, StringComparison.OrdinalIgnoreCase) && a.Id != sourceAccount.Id);
+                            destinationAccountId = dest?.Id;
+                        }
+                        if (!destinationAccountId.HasValue)
+                            return new AiToolExecutionResult(request.CallId, request.ToolName, false, null, "Transferencia requiere una cuenta destino válida.");
+                    }
+
+                    Guid? categoryId = null;
+                    var categoryName = GetString(args, "categoryName");
+                    if (!string.IsNullOrWhiteSpace(categoryName))
+                    {
+                        var categories = await _financeService.GetCategoriesAsync(userId, ct);
+                        var cat = categories.FirstOrDefault(c => c.Name.Contains(categoryName, StringComparison.OrdinalIgnoreCase));
+                        categoryId = cat?.Id;
+                    }
+
+                    var date = GetDateOnly(args, "date") ?? DateOnly.FromDateTime(DateTime.UtcNow);
+                    var destinationAmount = GetDecimal(args, "destinationAmount");
+                    var exchangeRate = GetDecimal(args, "exchangeRate");
+                    var notes = GetString(args, "notes");
+
+                    var tx = await _financeService.CreateTransactionAsync(userId, new CreateTransactionRequest(
+                        sourceAccount.Id,
+                        type,
+                        amount,
+                        description,
+                        date,
+                        DateTimeOffset.UtcNow,
+                        destinationAccountId,
+                        destinationAmount,
+                        exchangeRate,
+                        categoryId,
+                        notes
+                    ), ct);
+
+                    var updatedAccount = await _financeService.GetAccountByIdAsync(userId, sourceAccount.Id, ct);
+
+                    return new AiToolExecutionResult(request.CallId, request.ToolName, true, new
+                    {
+                        transactionId = tx.Id,
+                        accountName = sourceAccount.Name,
+                        type = tx.Type.ToString().ToLowerInvariant(),
+                        amount = tx.Amount,
+                        currency = sourceAccount.Currency,
+                        newBalance = updatedAccount?.CurrentBalance ?? sourceAccount.CurrentBalance,
+                        description = tx.Description,
+                        date = tx.Date.ToString("yyyy-MM-dd"),
+                        message = $"Transacción registrada exitosamente. Nuevo saldo en {sourceAccount.Name}: {sourceAccount.Currency} {updatedAccount?.CurrentBalance:N2}"
+                    });
                 }
 
                 default:

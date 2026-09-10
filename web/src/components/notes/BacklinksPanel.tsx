@@ -10,6 +10,7 @@ import {
   Hash,
   ChevronRight,
   Sparkles,
+  X,
 } from "lucide-react";
 import type { BacklinkItem, OutgoingLink } from "@/lib/api-client";
 
@@ -18,6 +19,7 @@ export interface BacklinksPanelProps {
   outgoingLinks?: OutgoingLink[];
   onSelectNote: (slugOrId: string) => void;
   className?: string;
+  onClose?: () => void;
 }
 
 export function BacklinksPanel({
@@ -25,6 +27,7 @@ export function BacklinksPanel({
   outgoingLinks = [],
   onSelectNote,
   className = "",
+  onClose,
 }: BacklinksPanelProps) {
   const [activeTab, setActiveTab] = useState<"backlinks" | "outgoing">("backlinks");
 
@@ -39,9 +42,21 @@ export function BacklinksPanel({
             <Link2 className="w-3.5 h-3.5 text-indigo-400" />
             <span>Conexiones de Segundo Cerebro</span>
           </div>
-          <span className="text-[11px] font-mono px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700/60">
-            {backlinks.length + outgoingLinks.length} total
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-mono px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700/60">
+              {backlinks.length + outgoingLinks.length} total
+            </span>
+            {onClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="p-1 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition"
+                aria-label="Cerrar panel de conexiones"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Tab switcher */}

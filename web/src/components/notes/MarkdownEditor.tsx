@@ -115,8 +115,9 @@ export function MarkdownEditor({
       const lines = textBeforeCursor.split("\n");
       const currentLineIndex = lines.length - 1;
       const currentLine = lines[currentLineIndex] || "";
-      const approxTop = Math.min(textarea.clientHeight - 180, Math.max(36, (currentLineIndex + 1) * 22 + 40));
-      const approxLeft = Math.min(textarea.clientWidth - 280, Math.max(16, currentLine.length * 8));
+      const approxTop = Math.min(Math.max(10, textarea.clientHeight - 200), Math.max(36, (currentLineIndex + 1) * 22 + 40));
+      const maxAvailableLeft = Math.max(8, textarea.clientWidth - 295);
+      const approxLeft = Math.max(8, Math.min(maxAvailableLeft, currentLine.length * 8));
       setPopoverCoords({ top: approxTop, left: approxLeft });
     } else {
       setIsAutocompleteOpen(false);
@@ -228,14 +229,14 @@ export function MarkdownEditor({
   return (
     <div className={`flex flex-col h-full bg-zinc-950 border border-zinc-800 rounded-xl overflow-hidden ${className}`}>
       {/* Editor Header / Action Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 border-b border-zinc-800 bg-zinc-900/60 backdrop-blur-sm select-none">
+      <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 border-b border-zinc-800 bg-zinc-900/60 backdrop-blur-sm select-none">
         {/* Formatting tools */}
-        <div className="flex items-center gap-1 overflow-x-auto py-0.5 scrollbar-none">
+        <div className="flex items-center gap-1 overflow-x-auto py-0.5 scrollbar-none touch-pan-x flex-1 min-w-0 pr-1">
           <button
             type="button"
             title="Negrita (Ctrl+B)"
             onClick={() => insertText("**", "**", "texto")}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition"
+            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition shrink-0"
           >
             <Bold className="w-3.5 h-3.5" />
           </button>
@@ -243,16 +244,16 @@ export function MarkdownEditor({
             type="button"
             title="Cursiva (Ctrl+I)"
             onClick={() => insertText("*", "*", "texto")}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition"
+            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition shrink-0"
           >
             <Italic className="w-3.5 h-3.5" />
           </button>
-          <div className="w-[1px] h-4 bg-zinc-800 mx-1" />
+          <div className="w-[1px] h-4 bg-zinc-800 mx-1 shrink-0" />
           <button
             type="button"
             title="Título 1"
             onClick={() => insertText("\n# ", "", "Título")}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition"
+            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition shrink-0"
           >
             <Heading1 className="w-3.5 h-3.5" />
           </button>
@@ -260,16 +261,16 @@ export function MarkdownEditor({
             type="button"
             title="Título 2"
             onClick={() => insertText("\n## ", "", "Subtítulo")}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition"
+            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition shrink-0"
           >
             <Heading2 className="w-3.5 h-3.5" />
           </button>
-          <div className="w-[1px] h-4 bg-zinc-800 mx-1" />
+          <div className="w-[1px] h-4 bg-zinc-800 mx-1 shrink-0" />
           <button
             type="button"
             title="Wikilink / Enlace de Segundo Cerebro"
             onClick={() => insertText("[[", "]]", "Nota o Idea")}
-            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 transition"
+            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 transition shrink-0"
           >
             <LinkIcon className="w-3 h-3" />
             <span>[[Enlace]]</span>
@@ -278,7 +279,7 @@ export function MarkdownEditor({
             type="button"
             title="Lista con viñetas"
             onClick={() => insertText("\n- ", "", "Elemento")}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition"
+            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition shrink-0"
           >
             <List className="w-3.5 h-3.5" />
           </button>
@@ -286,7 +287,7 @@ export function MarkdownEditor({
             type="button"
             title="Lista de tareas"
             onClick={() => insertText("\n- [ ] ", "", "Nueva tarea")}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition"
+            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition shrink-0"
           >
             <CheckSquare className="w-3.5 h-3.5" />
           </button>
@@ -294,7 +295,7 @@ export function MarkdownEditor({
             type="button"
             title="Cita"
             onClick={() => insertText("\n> ", "", "Cita")}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition"
+            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition shrink-0"
           >
             <Quote className="w-3.5 h-3.5" />
           </button>
@@ -302,14 +303,14 @@ export function MarkdownEditor({
             type="button"
             title="Bloque de código"
             onClick={() => insertText("\n```ts\n", "\n```\n", "// código")}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition"
+            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition shrink-0"
           >
             <Code className="w-3.5 h-3.5" />
           </button>
         </div>
 
         {/* View mode toggle tabs */}
-        <div className="flex items-center gap-0.5 bg-zinc-900 border border-zinc-800 rounded-lg p-0.5 text-xs">
+        <div className="flex items-center gap-0.5 bg-zinc-900 border border-zinc-800 rounded-lg p-0.5 text-xs shrink-0">
           <button
             type="button"
             onClick={() => handleSetMode("write")}
@@ -350,7 +351,7 @@ export function MarkdownEditor({
       </div>
 
       {/* Editor / Preview Content Area */}
-      <div className="relative flex-1 min-h-[360px] overflow-hidden">
+      <div className="relative flex-1 min-h-0 overflow-hidden">
         <div className="grid h-full grid-cols-1 md:grid-cols-2">
           {/* Write Column */}
           {(activeMode === "write" || activeMode === "split") && (
@@ -372,7 +373,7 @@ export function MarkdownEditor({
                 onKeyDown={handleKeyDown}
                 placeholder={placeholder}
                 spellCheck={false}
-                className="w-full h-full p-4 bg-zinc-950 text-zinc-100 font-mono text-sm leading-relaxed resize-none focus:outline-none focus:ring-0 placeholder:text-zinc-600 selection:bg-indigo-500/30"
+                className="w-full h-full p-3 sm:p-4 bg-zinc-950 text-zinc-100 font-mono text-base md:text-sm leading-relaxed resize-none focus:outline-none focus:ring-0 placeholder:text-zinc-600 selection:bg-indigo-500/30"
               />
 
               {/* Autocomplete Popover */}
@@ -382,7 +383,7 @@ export function MarkdownEditor({
                     top: `${popoverCoords.top}px`,
                     left: `${popoverCoords.left}px`,
                   }}
-                  className="absolute z-50 w-72 max-w-[calc(100%-32px)] bg-zinc-900/95 backdrop-blur-md border border-indigo-500/30 rounded-xl shadow-2xl shadow-indigo-950/50 p-1 text-xs overflow-hidden animate-in fade-in zoom-in-95 duration-100"
+                  className="absolute z-50 w-72 max-w-[calc(100vw-32px)] sm:max-w-[calc(100%-32px)] bg-zinc-900/95 backdrop-blur-md border border-indigo-500/30 rounded-xl shadow-2xl shadow-indigo-950/50 p-1 text-xs overflow-hidden animate-in fade-in zoom-in-95 duration-100"
                 >
                   <div className="flex items-center justify-between px-2 py-1.5 text-[11px] font-medium text-zinc-400 border-b border-zinc-800/80 mb-1">
                     <span className="flex items-center gap-1 text-indigo-400">
@@ -465,7 +466,7 @@ export function MarkdownEditor({
           {(activeMode === "preview" || activeMode === "split") && (
             <div
               className={`h-full overflow-y-auto p-4 sm:p-6 bg-zinc-950/80 ${
-                activeMode === "split" ? "col-span-1" : "col-span-full"
+                activeMode === "split" ? "hidden md:block col-span-1" : "col-span-full"
               }`}
             >
               <MarkdownRenderer content={value} onNavigateToNote={onNavigateToNote} />

@@ -1,4 +1,4 @@
-# Dominio: Life Tracker (Personal Life OS)
+# Dominio: Soma (Personal Life OS)
 
 ## Glosario y Lenguaje Ubicuo
 
@@ -32,6 +32,13 @@
 ### 6. Asistente IA (AI Assistant)
 - **Asistente (Life Assistant)**: Agente impulsado por Google Gemini 2.5 Flash con capacidad de consultar el Timeline unificado y ejecutar herramientas (*Function Calling*) para responder y correlacionar información de todas las áreas de vida.
 
+### 7. Finanzas Personales (Finances)
+- **Cuenta / Billetera (Financial Account)**: Depósito o instrumento monetario que custodia fondos líquidos o pasivos (ej. Efectivo ARS, Galicia, Mercado Pago, Caja de Ahorro USD). Posee una divisa base fija (`currency`), saldo inicial y saldo actual sincronizado.
+- **Transacción / Movimiento (Transaction)**: Registro atómico de flujo de capital clasificado como Ingreso (*Income*), Gasto (*Expense*) o Transferencia (*Transfer*) entre cuentas propias. Es auditable y posee fecha/hora, importe, categoría e impacto inmediato en el balance.
+- **Categoría Financiera (Transaction Category)**: Taxonomía funcional para clasificar ingresos y gastos (ej. Alimentación, Transporte, Servicios, Ocio, Salud, Educación, Salario) con color e icono Lucide identificatorio.
+- **Presupuesto Mensual (Budget)**: Límite de gasto planificado para un mes/año calendario específico, aplicable globalmente o por categoría, con cálculo de consumo porcentual y alertas de sobregiro.
+- **Flujo de Caja (Cashflow)**: Balance neto periódico resultante de la diferencia entre Ingresos Totales y Gastos Totales para una divisa dada, determinando la capacidad de ahorro.
+
 ---
 
 ## Invariantes del Negocio
@@ -40,3 +47,7 @@
 2. **Desacoplamiento vía Proyecciones**: Ningún Bounded Context puede consultar directamente tablas privadas de otro Bounded Context; toda interacción transversal se realiza a través de contratos de API, eventos o el read-model de `Timeline`.
 3. **Trazabilidad de Salud**: Ningún `ClinicalValue` puede existir sin su `MedicalStudy` de origen.
 4. **Resiliencia de Streaks**: Las rachas de hábitos son inmutables retroactivamente a partir de un período de gracia configurable (máximo 48 horas).
+5. **Consistencia Atómica de Saldos (Finanzas)**: El saldo actual (`current_balance`) de una cuenta refleja rigurosamente su saldo inicial más la suma algebraica de las transacciones asentadas. La inserción, edición o reversión de una transacción recalcula el saldo de las cuentas involucradas dentro de una transacción atómica de base de datos (Unit of Work), impidiendo inconsistencias o condiciones de carrera.
+6. **Inmutabilidad y Precisión Decimal**: Ninguna transacción confirmada es purgada físicamente sin auditoría contable. Todos los montos se modelan obligatoriamente con tipo `decimal` (PostgreSQL `numeric(14,2)` / C# `decimal`), prohibiendo tipos de coma flotante (`float`/`double`) para eliminar errores de redondeo.
+7. **Segregación Monetaria Explícita**: No se realizan conversiones implícitas entre divisas dispares (ej. ARS y USD). Cada cuenta opera en su moneda nativa. Las transferencias entre cuentas de distinta moneda exigen declarar explícitamente el tipo de cambio o los montos debitados y acreditados en cada extremo.
+
