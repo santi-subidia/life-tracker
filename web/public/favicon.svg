@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 70" width="120" height="70">
+  <defs>
+    <linearGradient id="somaSilverLeft" x1="15" y1="10" x2="65" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="30%" stop-color="#cbd5e1" />
+      <stop offset="70%" stop-color="#64748b" />
+      <stop offset="100%" stop-color="#38bdf8" />
+    </linearGradient>
+    <linearGradient id="somaSilverRight" x1="55" y1="10" x2="105" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="30%" stop-color="#e2e8f0" />
+      <stop offset="70%" stop-color="#94a3b8" />
+      <stop offset="100%" stop-color="#818cf8" />
+    </linearGradient>
+    <radialGradient id="somaCoreGlow" cx="60" cy="35" r="28" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.9" />
+      <stop offset="50%" stop-color="#818cf8" stop-opacity="0.4" />
+      <stop offset="100%" stop-color="#09090b" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="somaArcLight" x1="30" y1="15" x2="90" y2="55" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95" />
+      <stop offset="50%" stop-color="#67e8f9" stop-opacity="0.7" />
+      <stop offset="100%" stop-color="#a5b4fc" stop-opacity="0.85" />
+    </linearGradient>
+  </defs>
+
+  <rect width="120" height="70" rx="18" fill="#09090b" />
+  <circle cx="60" cy="35" r="25" fill="url(#somaCoreGlow)" />
+
+  <circle cx="42" cy="35" r="23" stroke="url(#somaSilverLeft)" stroke-width="3.5" stroke-linecap="round" />
+  <path d="M 24 25 C 28 16, 46 14, 56 22 C 60 26, 62 33, 60 40 C 58 48, 48 55, 38 55 C 26 55, 18 45, 22 33" stroke="url(#somaArcLight)" stroke-width="2.2" stroke-linecap="round" />
+  <path d="M 32 30 C 35 22, 47 22, 53 28 C 58 34, 54 44, 46 47 C 37 49, 30 42, 32 33" stroke="#e2e8f0" stroke-width="1.8" stroke-linecap="round" />
+
+  <circle cx="78" cy="35" r="23" stroke="url(#somaSilverRight)" stroke-width="3.5" stroke-linecap="round" />
+  <path d="M 96 45 C 92 54, 74 56, 64 48 C 60 44, 58 37, 60 30 C 62 22, 72 15, 82 15 C 94 15, 102 25, 98 37" stroke="url(#somaArcLight)" stroke-width="2.2" stroke-linecap="round" />
+  <path d="M 88 40 C 85 48, 73 48, 67 42 C 62 36, 66 26, 74 23 C 83 21, 90 28, 88 37" stroke="#f8fafc" stroke-width="1.8" stroke-linecap="round" />
+
+  <circle cx="60" cy="27" r="2" fill="#e0f2fe" />
+  <circle cx="60" cy="43" r="2" fill="#c7d2fe" />
+</svg>

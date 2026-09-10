@@ -5,6 +5,13 @@ export const metadata: Metadata = {
   title: "Soma | Personal Operating System",
   description: "Sistema Operativo Personal: Salud, Hábitos, Segundo Cerebro, Trabajo y Academia.",
   manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/favicon.svg", type: "image/svg+xml" },
+    ],
+    apple: "/brand/soma-logo-hero.jpg",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

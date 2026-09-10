@@ -161,7 +161,7 @@ export default function ProfilePage() {
 
   const initials = profile.name
     .split(" ")
-    .map((w) => w[0])
+    .map((w: string) => w[0])
     .filter(Boolean)
     .slice(0, 2)
     .join("")

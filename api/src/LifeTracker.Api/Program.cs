@@ -93,6 +93,7 @@ app.MapAcademicEndpoints();
 app.MapAiEndpoints();
 app.MapProfileEndpoints();
 app.MapFinanceEndpoints();
+app.MapFitnessEndpoints();
 
 // Aplicar migraciones pendientes de EF Core automáticamente en la base de datos
 using (var scope = app.Services.CreateScope())

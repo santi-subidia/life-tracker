@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using LifeTracker.Domain.Academics;
 using LifeTracker.Domain.Ai;
 using LifeTracker.Domain.Finances;
+using LifeTracker.Domain.Fitness;
 using LifeTracker.Domain.Habits;
 using LifeTracker.Domain.Health;
 using LifeTracker.Domain.Notes;
@@ -31,6 +32,11 @@ public interface ILifeTrackerDbContext
     DbSet<TransactionCategory> TransactionCategories { get; }
     DbSet<Transaction> Transactions { get; }
     DbSet<Budget> Budgets { get; }
+    DbSet<Exercise> Exercises { get; }
+    DbSet<Routine> Routines { get; }
+    DbSet<RoutineExercise> RoutineExercises { get; }
+    DbSet<WorkoutSession> WorkoutSessions { get; }
+    DbSet<WorkoutSet> WorkoutSets { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

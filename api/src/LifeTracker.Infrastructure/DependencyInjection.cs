@@ -5,6 +5,7 @@ using LifeTracker.Application.Academics.Services;
 using LifeTracker.Application.Ai.Services;
 using LifeTracker.Application.Common.Interfaces;
 using LifeTracker.Application.Finances.Services;
+using LifeTracker.Application.Fitness.Services;
 using LifeTracker.Application.Habits.Services;
 using LifeTracker.Application.Health.Services;
 using LifeTracker.Application.Notes.Services;
@@ -56,6 +57,9 @@ public static class DependencyInjection
         services.AddScoped<IAccountBalanceManager, AccountBalanceManager>();
         services.AddSingleton<IBudgetConsumptionAnalyzer, BudgetConsumptionAnalyzer>();
         services.AddSingleton<ICashflowAggregator, CashflowAggregator>();
+        services.AddSingleton<IProgressiveOverloadCalculator, ProgressiveOverloadCalculator>();
+        services.AddSingleton<IMuscleVolumeAggregator, MuscleVolumeAggregator>();
+        services.AddSingleton<IRestTimerController, RestTimerController>();
 
         // Seams
         services.AddScoped<IHabitTimelineProjector, HabitTimelineProjector>();
@@ -63,6 +67,7 @@ public static class DependencyInjection
         services.AddScoped<IWorkTimelineProjector, WorkTimelineProjector>();
         services.AddScoped<IAcademicTimelineProjector, AcademicTimelineProjector>();
         services.AddScoped<IFinanceTimelineProjector, FinanceTimelineProjector>();
+        services.AddScoped<IFitnessTimelineProjector, FitnessTimelineProjector>();
 
         // Application Services
         services.AddScoped<IHealthService, HealthService>();
@@ -72,6 +77,7 @@ public static class DependencyInjection
         services.AddScoped<IWorkService, WorkService>();
         services.AddScoped<IAcademicService, AcademicService>();
         services.AddScoped<IFinanceService, FinanceService>();
+        services.AddScoped<IFitnessService, FitnessService>();
         services.AddScoped<IAiToolDispatcher, AiToolDispatcher>();
         services.AddScoped<IAiAssistantService, AiAssistantService>();
         services.AddScoped<LifeTracker.Application.Profile.Services.IProfileService, LifeTracker.Application.Profile.Services.ProfileService>();

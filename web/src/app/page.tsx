@@ -20,11 +20,13 @@ import {
   Menu,
   X,
   Wallet,
+  Dumbbell,
 } from "lucide-react";
 import {
   LifeTrackerApiClient,
   type DailyHubData,
 } from "@/lib/api-client";
+import { SomaLogo } from "@/components/ui/SomaLogo";
 
 export default function SomaDashboardPage() {
   const [hubData, setHubData] = useState<DailyHubData | null>(null);
@@ -57,6 +59,22 @@ export default function SomaDashboardPage() {
       window.removeEventListener("user_profile_updated", handleProfileUpdate);
     };
   }, []);
+
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === "Escape") setMobileMenuOpen(false);
+      };
+      window.addEventListener("keydown", handleKeyDown);
+      return () => {
+        document.body.style.overflow = "";
+        window.removeEventListener("keydown", handleKeyDown);
+      };
+    } else {
+      document.body.style.overflow = "";
+    }
+  }, [mobileMenuOpen]);
 
   async function loadHubData() {
     try {
@@ -213,13 +231,70 @@ export default function SomaDashboardPage() {
   ];
 
   const pillarsNav = [
-    { name: "Salud", href: "/salud", icon: Activity, accent: "hover:text-rose-400" },
-    { name: "Hábitos", href: "/habitos", icon: CheckCircle2, accent: "hover:text-emerald-400" },
-    { name: "Segundo Cerebro", href: "/notas", icon: BookOpen, accent: "hover:text-indigo-400" },
-    { name: "Trabajo & Foco", href: "/trabajo", icon: Briefcase, accent: "hover:text-amber-400" },
-    { name: "Academia", href: "/academia", icon: GraduationCap, accent: "hover:text-sky-400" },
-    { name: "Finanzas", href: "/finanzas", icon: Wallet, accent: "hover:text-emerald-400" },
-    { name: "Asistente AI", href: "/asistente", icon: Sparkles, accent: "hover:text-purple-400 font-medium" },
+    {
+      name: "Salud",
+      desc: "Métricas de sueño, peso y energía",
+      href: "/salud",
+      icon: Activity,
+      accent: "hover:text-rose-400",
+      colorBg: "bg-rose-500/10 text-rose-400 border-rose-500/20",
+    },
+    {
+      name: "Hábitos",
+      desc: "Rutinas y consistencia diaria",
+      href: "/habitos",
+      icon: CheckCircle2,
+      accent: "hover:text-emerald-400",
+      colorBg: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+    },
+    {
+      name: "Segundo Cerebro",
+      desc: "Notas, ideas y base de conocimiento",
+      href: "/notas",
+      icon: BookOpen,
+      accent: "hover:text-indigo-400",
+      colorBg: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20",
+    },
+    {
+      name: "Trabajo & Foco",
+      desc: "Pomodoro, proyectos y tareas",
+      href: "/trabajo",
+      icon: Briefcase,
+      accent: "hover:text-amber-400",
+      colorBg: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+    },
+    {
+      name: "Academia",
+      desc: "Cursos, exámenes y progreso",
+      href: "/academia",
+      icon: GraduationCap,
+      accent: "hover:text-sky-400",
+      colorBg: "bg-sky-500/10 text-sky-400 border-sky-500/20",
+    },
+    {
+      name: "Finanzas",
+      desc: "Control de gastos y presupuestos",
+      href: "/finanzas",
+      icon: Wallet,
+      accent: "hover:text-emerald-400",
+      colorBg: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+    },
+    {
+      name: "Entrenamientos",
+      desc: "Gimnasio, rutinas y sobrecarga progresiva",
+      href: "/entrenamientos",
+      icon: Dumbbell,
+      accent: "hover:text-amber-400",
+      colorBg: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+    },
+    {
+      name: "Asistente AI",
+      desc: "Copiloto inteligente del sistema",
+      href: "/asistente",
+      icon: Sparkles,
+      accent: "hover:text-purple-400 font-medium",
+      colorBg: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+    },
   ];
 
   const completedHabitsCount = hubData?.habits.filter((h) => h.isCompletedToday).length || 0;
@@ -232,35 +307,10 @@ export default function SomaDashboardPage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           {/* Brand Logo & Name */}
           <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-3 group">
-              <div className="w-8 h-8 rounded-xl bg-neutral-900 border border-neutral-700/80 flex items-center justify-center shadow-inner group-hover:border-neutral-500 transition-colors">
-                {/* Minimalist Geometric Glyph: SOMA */}
-                <svg
-                  className="w-4 h-4 text-neutral-200 group-hover:text-white transition-colors"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <circle cx="12" cy="12" r="9" strokeWidth="2" strokeDasharray="4 2" />
-                  <path d="M12 7v10" />
-                  <path d="M8 12h8" />
-                </svg>
-              </div>
-              <div className="flex flex-col">
-                <span className="font-bold text-sm tracking-widest uppercase text-neutral-100 group-hover:text-white transition-colors">
-                  Soma
-                </span>
-                <span className="text-[10px] uppercase tracking-wider text-neutral-500 font-medium -mt-0.5">
-                  Personal OS
-                </span>
-              </div>
-            </Link>
+            <SomaLogo href="/" size="sm" />
           </div>
 
-          {/* Module Links */}
+          {/* Module Links (Desktop) */}
           <nav className="hidden md:flex items-center gap-1">
             {pillarsNav.map((item) => {
               const Icon = item.icon;
@@ -292,65 +342,89 @@ export default function SomaDashboardPage() {
             <button
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 rounded-xl bg-neutral-900/90 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 hover:text-white transition flex items-center justify-center shrink-0"
+              className="md:hidden p-2 rounded-xl bg-neutral-900/90 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 hover:text-white transition flex items-center justify-center shrink-0 active:scale-95"
               aria-label={mobileMenuOpen ? "Cerrar menú de módulos" : "Abrir menú de módulos"}
+              aria-expanded={mobileMenuOpen}
+              aria-controls="mobile-menu-drawer"
             >
               {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
             </button>
           </div>
         </div>
+      </header>
 
-        {/* Mobile Navigation Drawer */}
-        {mobileMenuOpen && (
-          <div className="md:hidden fixed inset-x-0 top-16 bottom-0 z-50 bg-black/80 backdrop-blur-md animate-in fade-in duration-150 flex flex-col">
-            <div className="bg-neutral-950 border-b border-neutral-800 p-4 space-y-1 shadow-2xl max-h-[calc(100vh-4rem)] overflow-y-auto">
-              <div className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider px-3 pb-1">
-                Módulos del Sistema
+      {/* Mobile Navigation Drawer (Rendered outside header to escape backdrop-filter containing block) */}
+      {mobileMenuOpen && (
+        <div
+          id="mobile-menu-drawer"
+          className="md:hidden fixed inset-x-0 top-16 bottom-0 z-40 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200 flex flex-col"
+        >
+          <div className="bg-neutral-950 border-b border-neutral-800/80 shadow-2xl flex flex-col max-h-[calc(100dvh-4rem)] overflow-y-auto overscroll-contain">
+            <div className="p-4 space-y-3">
+              <div className="flex items-center justify-between px-2 pt-1 pb-1">
+                <span className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Módulos del Sistema
+                </span>
+                <span className="text-[10px] text-neutral-500 font-mono">Soma OS</span>
               </div>
-              {pillarsNav.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-3 px-3 py-3 rounded-xl text-neutral-200 hover:text-white hover:bg-neutral-900 border border-transparent hover:border-neutral-800 transition active:scale-[0.99]"
-                  >
-                    <div className="w-9 h-9 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-center shrink-0">
-                      <Icon className="w-4 h-4 text-neutral-300" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-semibold text-neutral-200">{item.name}</div>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-neutral-600" />
-                  </Link>
-                );
-              })}
 
-              <div className="pt-2 border-t border-neutral-900">
+              {/* Navigation Items List */}
+              <div className="space-y-1">
+                {pillarsNav.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="group flex items-center gap-3 p-2.5 rounded-xl text-neutral-300 hover:text-white hover:bg-neutral-900 border border-transparent hover:border-neutral-800/80 transition-all active:scale-[0.99]"
+                    >
+                      <div className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 ${item.colorBg}`}>
+                        <Icon className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-semibold text-neutral-200 group-hover:text-white">
+                          {item.name}
+                        </div>
+                        <div className="text-[11px] text-neutral-500 group-hover:text-neutral-400 truncate">
+                          {item.desc}
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-neutral-600 group-hover:text-neutral-400 transition-transform group-hover:translate-x-0.5 shrink-0" />
+                    </Link>
+                  );
+                })}
+              </div>
+
+              {/* User Profile & Footer */}
+              <div className="pt-2 border-t border-neutral-800/80">
                 <Link
                   href="/perfil"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-3 px-3 py-3 rounded-xl text-neutral-200 hover:text-white hover:bg-neutral-900 border border-transparent hover:border-neutral-800 transition active:scale-[0.99]"
+                  className="flex items-center gap-3 p-2.5 rounded-xl text-neutral-300 hover:text-white hover:bg-neutral-900 border border-transparent hover:border-neutral-800/80 transition-all active:scale-[0.99]"
                 >
                   <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
                     <User className="w-4 h-4 text-amber-400" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-semibold text-neutral-200">Perfil & Resumen</div>
-                    <div className="text-xs text-neutral-500">Métricas y configuración</div>
+                    <div className="text-[11px] text-neutral-500">Métricas y configuración ({userName})</div>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-neutral-600" />
+                  <ChevronRight className="w-4 h-4 text-neutral-600 shrink-0" />
                 </Link>
               </div>
             </div>
-            <div
-              className="flex-1"
-              onClick={() => setMobileMenuOpen(false)}
-            />
           </div>
-        )}
-      </header>
+
+          {/* Semi-transparent backdrop to dismiss menu on click */}
+          <div
+            className="flex-1 min-h-12 cursor-pointer"
+            onClick={() => setMobileMenuOpen(false)}
+            aria-hidden="true"
+          />
+        </div>
+      )}
 
       {/* Main Content Area */}
       <main className="max-w-6xl mx-auto px-4 sm:px-6 pt-8 pb-20 w-full flex-1 space-y-8">

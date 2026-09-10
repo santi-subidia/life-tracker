@@ -1630,6 +1630,235 @@ export class LifeTrackerApiClient {
     if (!res.ok) throw new Error("Error al eliminar el presupuesto.");
   }
 
+  // --- FITNESS: EXERCISES ---
+  static async getExercises(params?: { search?: string; muscle?: string; discipline?: string; equipment?: string }, token?: string): Promise<Exercise[]> {
+    const url = new URL(`${API_BASE_URL}/api/fitness/exercises`);
+    if (params) {
+      if (params.search) url.searchParams.set("search", params.search);
+      if (params.muscle) url.searchParams.set("muscle", params.muscle);
+      if (params.discipline) url.searchParams.set("discipline", params.discipline);
+      if (params.equipment) url.searchParams.set("equipment", params.equipment);
+    }
+    const res = await fetch(url.toString(), { headers: this.getHeaders(token) });
+    if (!res.ok) throw new Error("Error al obtener catálogo de ejercicios.");
+    return res.json();
+  }
+
+  static async getExerciseById(id: string, token?: string): Promise<Exercise> {
+    const res = await fetch(`${API_BASE_URL}/api/fitness/exercises/${id}`, { headers: this.getHeaders(token) });
+    if (!res.ok) throw new Error("Ejercicio no encontrado.");
+    return res.json();
+  }
+
+  static async createCustomExercise(data: CreateCustomExerciseRequest, token?: string): Promise<Exercise> {
+    const res = await fetch(`${API_BASE_URL}/api/fitness/exercises`, {
+      method: "POST",
+      headers: { ...this.getHeaders(token), "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Error al crear el ejercicio.");
+    }
+    return res.json();
+  }
+
+  static async updateCustomExercise(id: string, data: UpdateCustomExerciseRequest, token?: string): Promise<Exercise> {
+    const res = await fetch(`${API_BASE_URL}/api/fitness/exercises/${id}`, {
+      method: "PUT",
+      headers: { ...this.getHeaders(token), "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Error al actualizar el ejercicio.");
+    }
+    return res.json();
+  }
+
+  static async deleteCustomExercise(id: string, token?: string): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/api/fitness/exercises/${id}`, {
+      method: "DELETE",
+      headers: this.getHeaders(token),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Error al eliminar el ejercicio.");
+    }
+  }
+
+  static async getExerciseHistory(exerciseIdOrName: string, limit: number = 10, token?: string): Promise<WorkoutSet[]> {
+    const res = await fetch(`${API_BASE_URL}/api/fitness/exercises/${encodeURIComponent(exerciseIdOrName)}/history?limit=${limit}`, {
+      headers: this.getHeaders(token),
+    });
+    if (!res.ok) return [];
+    return res.json();
+  }
+
+  // --- FITNESS: ROUTINES ---
+  static async getRoutines(token?: string): Promise<Routine[]> {
+    const res = await fetch(`${API_BASE_URL}/api/fitness/routines`, { headers: this.getHeaders(token) });
+    if (!res.ok) throw new Error("Error al obtener rutinas.");
+    return res.json();
+  }
+
+  static async getRoutineById(id: string, token?: string): Promise<Routine> {
+    const res = await fetch(`${API_BASE_URL}/api/fitness/routines/${id}`, { headers: this.getHeaders(token) });
+    if (!res.ok) throw new Error("Rutina no encontrada.");
+    return res.json();
+  }
+
+  static async createRoutine(data: CreateRoutineRequest, token?: string): Promise<Routine> {
+    const res = await fetch(`${API_BASE_URL}/api/fitness/routines`, {
+      method: "POST",
+      headers: { ...this.getHeaders(token), "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Error al crear la rutina.");
+    }
+    return res.json();
+  }
+
+  static async updateRoutine(id: string, data: CreateRoutineRequest, token?: string): Promise<Routine> {
+    const res = await fetch(`${API_BASE_URL}/api/fitness/routines/${id}`, {
+      method: "PUT",
+      headers: { ...this.getHeaders(token), "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Error al actualizar la rutina.");
+    }
+    return res.json();
+  }
+
+  static async archiveRoutine(id: string, token?: string): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/api/fitness/routines/${id}`, {
+      method: "DELETE",
+      headers: this.getHeaders(token),
+    });
+    if (!res.ok) throw new Error("Error al archivar la rutina.");
+  }
+
+  // --- FITNESS: SESSIONS ---
+  static async getActiveWorkoutSession(token?: string): Promise<WorkoutSession | null> {
+    const res = await fetch(`${API_BASE_URL}/api/fitness/sessions/active`, { headers: this.getHeaders(token) });
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error("Error al consultar sesión activa.");
+    return res.json();
+  }
+
+  static async startWorkoutSession(data: { name: string; routineId?: string }, token?: string): Promise<WorkoutSession> {
+    const res = await fetch(`${API_BASE_URL}/api/fitness/sessions/start`, {
+      method: "POST",
+      headers: { ...this.getHeaders(token), "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Error al iniciar el entrenamiento.");
+    }
+    return res.json();
+  }
+
+  static async logWorkoutSet(
+    sessionId: string,
+    data: {
+      exerciseId: string;
+      setOrder: number;
+      setType: string;
+      weightKg: number;
+      reps: number;
+      rpe?: number | null;
+      rir?: number | null;
+      isCompleted: boolean;
+    },
+    token?: string
+  ): Promise<WorkoutSet> {
+    const res = await fetch(`${API_BASE_URL}/api/fitness/sessions/${sessionId}/sets`, {
+      method: "POST",
+      headers: { ...this.getHeaders(token), "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Error al registrar la serie.");
+    }
+    return res.json();
+  }
+
+  static async updateWorkoutSet(
+    sessionId: string,
+    setId: string,
+    data: {
+      setType: string;
+      weightKg: number;
+      reps: number;
+      rpe?: number | null;
+      rir?: number | null;
+      isCompleted: boolean;
+    },
+    token?: string
+  ): Promise<WorkoutSet> {
+    const res = await fetch(`${API_BASE_URL}/api/fitness/sessions/${sessionId}/sets/${setId}`, {
+      method: "PUT",
+      headers: { ...this.getHeaders(token), "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Error al actualizar la serie.");
+    }
+    return res.json();
+  }
+
+  static async deleteWorkoutSet(sessionId: string, setId: string, token?: string): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/api/fitness/sessions/${sessionId}/sets/${setId}`, {
+      method: "DELETE",
+      headers: this.getHeaders(token),
+    });
+    if (!res.ok) throw new Error("Error al eliminar la serie.");
+  }
+
+  static async completeWorkoutSession(sessionId: string, data: { notes?: string }, token?: string): Promise<WorkoutSession> {
+    const res = await fetch(`${API_BASE_URL}/api/fitness/sessions/${sessionId}/complete`, {
+      method: "POST",
+      headers: { ...this.getHeaders(token), "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Error al finalizar el entrenamiento.");
+    }
+    return res.json();
+  }
+
+  static async discardWorkoutSession(sessionId: string, token?: string): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/api/fitness/sessions/${sessionId}/discard`, {
+      method: "POST",
+      headers: this.getHeaders(token),
+    });
+    if (!res.ok) throw new Error("Error al descartar el entrenamiento.");
+  }
+
+  static async getWorkoutSessionsHistory(limit: number = 20, token?: string): Promise<WorkoutSession[]> {
+    const res = await fetch(`${API_BASE_URL}/api/fitness/sessions/history?limit=${limit}`, {
+      headers: this.getHeaders(token),
+    });
+    if (!res.ok) throw new Error("Error al obtener historial de entrenamientos.");
+    return res.json();
+  }
+
+  static async getWorkoutSessionById(sessionId: string, token?: string): Promise<WorkoutSession> {
+    const res = await fetch(`${API_BASE_URL}/api/fitness/sessions/${sessionId}`, {
+      headers: this.getHeaders(token),
+    });
+    if (!res.ok) throw new Error("Sesión de entrenamiento no encontrada.");
+    return res.json();
+  }
+
   static getUserProfile(): UserProfileSettings {
     if (typeof window === "undefined") {
       return { name: "Subi", title: "Software Engineer & Student", bio: "Construyendo sistemas de alto rendimiento y hábitos de acero." };
@@ -1652,6 +1881,12 @@ export class LifeTrackerApiClient {
       // Ignore
     }
   }
+}
+
+export interface UserProfileSettings {
+  name: string;
+  title: string;
+  bio: string;
 }
 
 // ==============================================================================
@@ -1681,10 +1916,137 @@ export interface ProfileSummary {
   activityTimeline: ProfileActivityPoint[];
 }
 
-export interface UserProfileSettings {
+// ==============================================================================
+// FITNESS & WORKOUTS INTERFACES
+// ==============================================================================
+
+export interface MuscleStimulus {
+  muscle: string;
+  stimulus_pct: number;
+}
+
+export interface Exercise {
+  id: string;
+  userId?: string | null;
   name: string;
-  title?: string;
-  bio?: string;
+  slug: string;
+  discipline: "strength" | "cardio" | "calisthenics" | "mobility";
+  primaryMuscleGroup: string;
+  muscleStimulus: MuscleStimulus[];
+  equipment: string;
+  instructions: string[];
+  gifUrl: string;
+  videoUrl?: string | null;
+  isCustom: boolean;
+  createdAt: string;
+}
+
+export interface CreateCustomExerciseRequest {
+  name: string;
+  discipline: string;
+  primaryMuscleGroup: string;
+  muscleStimulus: MuscleStimulus[];
+  equipment: string;
+  instructions?: string[];
+  gifUrl?: string;
+  videoUrl?: string;
+}
+
+export interface UpdateCustomExerciseRequest {
+  name: string;
+  discipline: string;
+  primaryMuscleGroup: string;
+  muscleStimulus: MuscleStimulus[];
+  equipment: string;
+  instructions?: string[];
+  gifUrl?: string;
+  videoUrl?: string;
+}
+
+export interface RoutineExercise {
+  id: string;
+  routineId: string;
+  exerciseId: string;
+  exerciseName: string;
+  primaryMuscleGroup: string;
+  equipment: string;
+  gifUrl: string;
+  orderIndex: number;
+  targetSets: number;
+  targetRepsMin: number;
+  targetRepsMax: number;
+  restTimerSeconds: number;
+  notes?: string | null;
+}
+
+export interface Routine {
+  id: string;
+  userId: string;
+  name: string;
+  description?: string | null;
+  estimatedDurationMinutes: number;
+  isArchived: boolean;
+  exercises: RoutineExercise[];
+  createdAt: string;
+}
+
+export interface CreateRoutineRequest {
+  name: string;
+  description?: string | null;
+  estimatedDurationMinutes: number;
+  exercises: {
+    exerciseId: string;
+    orderIndex: number;
+    targetSets: number;
+    targetRepsMin: number;
+    targetRepsMax: number;
+    restTimerSeconds: number;
+    notes?: string | null;
+  }[];
+}
+
+export interface GhostSetReference {
+  currentSetId: string;
+  setOrder: number;
+  previousWeightKg: number;
+  previousReps: number;
+  previousRpe?: number | null;
+  previousDate: string;
+}
+
+export interface WorkoutSet {
+  id: string;
+  sessionId: string;
+  exerciseId: string;
+  exerciseName: string;
+  primaryMuscleGroup: string;
+  equipment: string;
+  gifUrl: string;
+  setOrder: number;
+  setType: "normal" | "warmup" | "drop_set" | "failure";
+  weightKg: number;
+  reps: number;
+  rpe?: number | null;
+  rir?: number | null;
+  isCompleted: boolean;
+  completedAt?: string | null;
+  ghostReference?: GhostSetReference | null;
+}
+
+export interface WorkoutSession {
+  id: string;
+  userId: string;
+  routineId?: string | null;
+  routineName?: string | null;
+  name: string;
+  status: "active" | "completed" | "discarded";
+  startedAt: string;
+  completedAt?: string | null;
+  durationSeconds: number;
+  totalVolumeKg: number;
+  totalSetsCompleted: number;
+  notes?: string | null;
+  sets: WorkoutSet[];
 }
 
 export const ApiClient = LifeTrackerApiClient;
