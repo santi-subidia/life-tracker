@@ -44,14 +44,15 @@ public class AiToolDispatcherTests
     }
 
     [Fact]
-    public void GetAvailableToolDefinitions_ShouldReturnAllTwelveTools()
+    public void GetAvailableToolDefinitions_ShouldReturnAllThirteenTools()
     {
         var dispatcher = CreateDispatcher();
         var tools = dispatcher.GetAvailableToolDefinitions();
 
-        Assert.Equal(12, tools.Count);
+        Assert.Equal(13, tools.Count);
         Assert.Contains(tools, t => t.Name == "get_health_summary");
         Assert.Contains(tools, t => t.Name == "get_habits_status");
+        Assert.Contains(tools, t => t.Name == "create_habit");
         Assert.Contains(tools, t => t.Name == "search_notes");
         Assert.Contains(tools, t => t.Name == "get_work_tasks");
         Assert.Contains(tools, t => t.Name == "get_academic_status");
@@ -116,6 +117,38 @@ public class AiToolDispatcherTests
         Assert.Equal("call-2", result.CallId);
         Assert.Equal(userId, _habitService.LastUserId);
         Assert.Equal(habitId, _habitService.LastHabitId);
+    }
+
+    [Fact]
+    public async Task DispatchAsync_CreateHabit_ShouldInvokeHabitService()
+    {
+        var dispatcher = CreateDispatcher();
+        var userId = Guid.NewGuid();
+
+        var request = new AiToolCallRequest(
+            CallId: "call-create-habit-1",
+            ToolName: "create_habit",
+            Arguments: new Dictionary<string, object?>
+            {
+                ["name"] = "Lectura nocturna",
+                ["description"] = "Leer 20 páginas antes de dormir",
+                ["category"] = "Estudio",
+                ["frequencyType"] = "daily",
+                ["color"] = "#10b981",
+                ["icon"] = "book-open"
+            }
+        );
+
+        var result = await dispatcher.DispatchAsync(userId, request);
+
+        Assert.True(result.Success);
+        Assert.Equal("call-create-habit-1", result.CallId);
+        Assert.Equal(userId, _habitService.LastCreatedUserId);
+        Assert.NotNull(_habitService.LastCreateRequest);
+        Assert.Equal("Lectura nocturna", _habitService.LastCreateRequest?.Name);
+        Assert.Equal("Leer 20 páginas antes de dormir", _habitService.LastCreateRequest?.Description);
+        Assert.Equal("Estudio", _habitService.LastCreateRequest?.Category);
+        Assert.Equal("daily", _habitService.LastCreateRequest?.FrequencyType);
     }
 
     [Fact]
@@ -255,6 +288,8 @@ public class AiToolDispatcherTests
     {
         public Guid LastUserId { get; private set; }
         public Guid LastHabitId { get; private set; }
+        public Guid LastCreatedUserId { get; private set; }
+        public CreateHabitRequest? LastCreateRequest { get; private set; }
 
         public Task<ToggleHabitResultDto> ToggleHabitCompletionAsync(Guid userId, Guid habitId, ToggleHabitRequest request, CancellationToken cancellationToken = default)
         {
@@ -264,7 +299,18 @@ public class AiToolDispatcherTests
         }
 
         public Task<List<HabitDto>> GetHabitsAsync(Guid userId, bool includeArchived = false, CancellationToken cancellationToken = default) => Task.FromResult(new List<HabitDto>());
-        public Task<HabitDto> CreateHabitAsync(Guid userId, CreateHabitRequest request, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+
+        public Task<HabitDto> CreateHabitAsync(Guid userId, CreateHabitRequest request, CancellationToken cancellationToken = default)
+        {
+            LastCreatedUserId = userId;
+            LastCreateRequest = request;
+            return Task.FromResult(new HabitDto(
+                Guid.NewGuid(), userId, request.Name, request.Description, request.Category,
+                new HabitFrequencyDto(request.FrequencyType, request.TargetDaysPerWeek, request.SpecificDays),
+                request.Color, request.Icon, false, 0, 0, false, DateTime.UtcNow
+            ));
+        }
+
         public Task<HabitDto?> UpdateHabitAsync(Guid userId, Guid habitId, UpdateHabitRequest request, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<bool> ArchiveHabitAsync(Guid userId, Guid habitId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
     }

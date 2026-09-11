@@ -226,23 +226,5 @@ public static class HealthEndpoints
         return group;
     }
 
-    private static Guid GetUserId(HttpContext context)
-    {
-        // 1. Intentar desde JWT claim "sub" (Supabase Auth)
-        var claim = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                    ?? context.User.FindFirst("sub")?.Value;
-
-        if (Guid.TryParse(claim, out var jwtUserId))
-            return jwtUserId;
-
-        // 2. Fallback para desarrollo / pruebas locales vía header X-User-Id
-        if (context.Request.Headers.TryGetValue("X-User-Id", out var headerValue) 
-            && Guid.TryParse(headerValue, out var headerUserId))
-        {
-            return headerUserId;
-        }
-
-        // 3. Demo default user para pruebas iniciales
-        return Guid.Parse("00000000-0000-0000-0000-000000000001");
-    }
+    private static Guid GetUserId(HttpContext context) => EndpointAuthHelper.GetUserId(context);
 }

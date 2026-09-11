@@ -21,14 +21,17 @@ import {
   X,
   Wallet,
   Dumbbell,
+  LogOut,
 } from "lucide-react";
 import {
   LifeTrackerApiClient,
   type DailyHubData,
 } from "@/lib/api-client";
 import { SomaLogo } from "@/components/ui/SomaLogo";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function SomaDashboardPage() {
+  const { user, fullName, signOut } = useAuth();
   const [hubData, setHubData] = useState<DailyHubData | null>(null);
   const [loading, setLoading] = useState(true);
   const [mood, setMood] = useState<number | null>(null);
@@ -44,12 +47,22 @@ export default function SomaDashboardPage() {
     else if (hour < 20) setGreeting("Buenas tardes");
     else setGreeting("Buenas noches");
 
-    const p = LifeTrackerApiClient.getUserProfile();
-    if (p.name) setUserName(p.name);
+    const authName = user?.user_metadata?.full_name || fullName;
+    if (authName) {
+      setUserName(authName);
+    } else {
+      const p = LifeTrackerApiClient.getUserProfile();
+      if (p.name) setUserName(p.name);
+    }
 
     const handleProfileUpdate = () => {
-      const updated = LifeTrackerApiClient.getUserProfile();
-      if (updated.name) setUserName(updated.name);
+      const authUpdated = user?.user_metadata?.full_name || fullName;
+      if (authUpdated) {
+        setUserName(authUpdated);
+      } else {
+        const updated = LifeTrackerApiClient.getUserProfile();
+        if (updated.name) setUserName(updated.name);
+      }
     };
 
     window.addEventListener("user_profile_updated", handleProfileUpdate);
@@ -58,7 +71,7 @@ export default function SomaDashboardPage() {
     return () => {
       window.removeEventListener("user_profile_updated", handleProfileUpdate);
     };
-  }, []);
+  }, [user, fullName]);
 
   useEffect(() => {
     if (mobileMenuOpen) {
@@ -327,7 +340,7 @@ export default function SomaDashboardPage() {
             })}
           </nav>
 
-          {/* Right Actions: User Profile & Mobile Menu Toggle */}
+          {/* Right Actions: User Profile, Logout & Mobile Menu Toggle */}
           <div className="flex items-center gap-2 text-xs text-neutral-400">
             <Link
               href="/perfil"
@@ -337,6 +350,16 @@ export default function SomaDashboardPage() {
               <User className="w-3.5 h-3.5 text-amber-400" />
               <span className="hidden sm:inline font-semibold">{userName}</span>
             </Link>
+
+            <button
+              type="button"
+              onClick={() => signOut()}
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-neutral-900/90 hover:bg-rose-950/30 border border-neutral-800 hover:border-rose-500/40 text-neutral-400 hover:text-rose-300 transition text-xs font-medium shrink-0 cursor-pointer active:scale-95"
+              title="Cerrar Sesión"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Salir</span>
+            </button>
 
             {/* Mobile Hamburger Button */}
             <button
@@ -398,7 +421,7 @@ export default function SomaDashboardPage() {
               </div>
 
               {/* User Profile & Footer */}
-              <div className="pt-2 border-t border-neutral-800/80">
+              <div className="pt-2 border-t border-neutral-800/80 space-y-1">
                 <Link
                   href="/perfil"
                   onClick={() => setMobileMenuOpen(false)}
@@ -413,6 +436,23 @@ export default function SomaDashboardPage() {
                   </div>
                   <ChevronRight className="w-4 h-4 text-neutral-600 shrink-0" />
                 </Link>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    signOut();
+                  }}
+                  className="w-full flex items-center gap-3 p-2.5 rounded-xl text-neutral-400 hover:text-rose-300 hover:bg-rose-950/20 border border-transparent hover:border-rose-500/30 transition-all active:scale-[0.99] text-left cursor-pointer"
+                >
+                  <div className="w-9 h-9 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center shrink-0">
+                    <LogOut className="w-4 h-4 text-rose-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-neutral-200">Cerrar Sesión</div>
+                    <div className="text-[11px] text-neutral-500">Salir de SOMA en este dispositivo</div>
+                  </div>
+                </button>
               </div>
             </div>
           </div>

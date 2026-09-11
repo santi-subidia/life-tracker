@@ -883,16 +883,139 @@ export interface CashflowSummary {
 }
 
 // ==============================================================================
+// ADMIN & RBAC MANAGEMENT
+// ==============================================================================
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  fullName?: string | null;
+  role: "admin" | "user" | string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt?: string | null;
+  lastSignInAt?: string | null;
+}
+
+export interface CreateAdminUserPayload {
+  email: string;
+  password: string;
+  fullName?: string | null;
+  role?: "admin" | "user" | string;
+}
+
+export interface UpdateAdminUserRolePayload {
+  role: "admin" | "user" | string;
+}
+
+export interface ToggleAdminUserStatusPayload {
+  isActive: boolean;
+}
+
+export interface ResetAdminUserPasswordPayload {
+  newPassword: string;
+}
+
+// ==============================================================================
 // API CLIENT IMPLEMENTATION
 // ==============================================================================
 
 export class LifeTrackerApiClient {
-  private static getHeaders(token?: string): HeadersInit {
+  private static authToken: string | null = null;
+
+  static setAuthToken(token: string | null): void {
+    this.authToken = token;
+  }
+
+  private static getHeaders(token?: string): Record<string, string> {
     const headers: Record<string, string> = {};
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
+    const activeToken = token || this.authToken;
+    if (activeToken) {
+      headers["Authorization"] = `Bearer ${activeToken}`;
     }
     return headers;
+  }
+
+  // --- ADMIN & RBAC ---
+
+  static async getAdminUsers(token?: string): Promise<AdminUser[]> {
+    const res = await fetch(`${API_BASE_URL}/api/admin/users`, {
+      method: "GET",
+      headers: this.getHeaders(token),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || err.message || "Error al listar usuarios administrados.");
+    }
+
+    return res.json();
+  }
+
+  static async createAdminUser(payload: CreateAdminUserPayload, token?: string): Promise<AdminUser> {
+    const res = await fetch(`${API_BASE_URL}/api/admin/users`, {
+      method: "POST",
+      headers: {
+        ...this.getHeaders(token),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || err.message || "Error al crear usuario.");
+    }
+
+    return res.json();
+  }
+
+  static async updateAdminUserRole(id: string, role: string, token?: string): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/api/admin/users/${id}/role`, {
+      method: "PATCH",
+      headers: {
+        ...this.getHeaders(token),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ role }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || err.message || "Error al actualizar rol del usuario.");
+    }
+  }
+
+  static async toggleAdminUserStatus(id: string, isActive: boolean, token?: string): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/api/admin/users/${id}/status`, {
+      method: "PATCH",
+      headers: {
+        ...this.getHeaders(token),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ isActive }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || err.message || "Error al actualizar estado del usuario.");
+    }
+  }
+
+  static async resetAdminUserPassword(id: string, newPassword: string, token?: string): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/api/admin/users/${id}/reset-password`, {
+      method: "POST",
+      headers: {
+        ...this.getHeaders(token),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ newPassword }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || err.message || "Error al restablecer contraseña del usuario.");
+    }
   }
 
   // --- HEALTH ---

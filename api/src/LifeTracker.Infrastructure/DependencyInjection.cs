@@ -16,6 +16,7 @@ using LifeTracker.Domain.Habits;
 using LifeTracker.Domain.Notes;
 using LifeTracker.Domain.Work;
 using LifeTracker.Infrastructure.Ai;
+using LifeTracker.Infrastructure.Auth;
 using LifeTracker.Infrastructure.Persistence;
 using LifeTracker.Infrastructure.Storage;
 
@@ -33,12 +34,14 @@ public static class DependencyInjection
         if (string.IsNullOrWhiteSpace(connectionString) || connectionString.Contains("your-project"))
         {
             services.AddDbContext<LifeTrackerDbContext>(options =>
-                options.UseNpgsql("Host=localhost;Database=life_tracker;Username=postgres;Password=postgres"));
+                options.UseNpgsql("Host=localhost;Database=life_tracker;Username=postgres;Password=postgres")
+                       .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
         }
         else
         {
             services.AddDbContext<LifeTrackerDbContext>(options =>
-                options.UseNpgsql(connectionString, b => b.MigrationsAssembly(typeof(LifeTrackerDbContext).Assembly.FullName)));
+                options.UseNpgsql(connectionString, b => b.MigrationsAssembly(typeof(LifeTrackerDbContext).Assembly.FullName))
+                       .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
         }
 
         services.AddScoped<ILifeTrackerDbContext>(provider => provider.GetRequiredService<LifeTrackerDbContext>());
@@ -48,6 +51,7 @@ public static class DependencyInjection
         services.AddHttpClient<IAiExtractorService, GeminiAiExtractorService>();
         services.AddHttpClient<IAiCareerPlanExtractor, GeminiCareerPlanExtractorService>();
         services.AddHttpClient<IGeminiClient, GeminiClient>();
+        services.AddHttpClient<ISupabaseAdminAuthService, SupabaseAdminAuthService>();
 
         // Domain Services & Deep Modules
         services.AddSingleton<ICareerPrerequisiteEngine, CareerPrerequisiteEngine>();

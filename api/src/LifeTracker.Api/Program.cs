@@ -1,4 +1,6 @@
+using System.Security.Claims;
 using System.Text;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -31,30 +33,90 @@ builder.Services.AddCors(options =>
 var jwtSecret = builder.Configuration["Supabase:JwtSecret"] 
                 ?? Environment.GetEnvironmentVariable("SUPABASE_JWT_SECRET");
 
-if (!string.IsNullOrWhiteSpace(jwtSecret) && jwtSecret != "your-supabase-jwt-secret")
-{
-    var key = Encoding.UTF8.GetBytes(jwtSecret);
-    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-        .AddJwtBearer(options =>
-        {
-            options.RequireHttpsMetadata = false;
-            options.SaveToken = true;
-            options.TokenValidationParameters = new TokenValidationParameters
-            {
-                ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(key),
-                ValidateIssuer = false,
-                ValidateAudience = false,
-                ClockSkew = TimeSpan.Zero
-            };
-        });
-}
-else
-{
-    builder.Services.AddAuthentication();
-}
+var signingKey = !string.IsNullOrWhiteSpace(jwtSecret) && jwtSecret != "your-supabase-jwt-secret"
+    ? Encoding.UTF8.GetBytes(jwtSecret)
+    : Encoding.UTF8.GetBytes("soma-life-tracker-supabase-default-development-jwt-secret-key-32chars!");
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.RequireHttpsMetadata = false;
+    options.SaveToken = true;
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(signingKey),
+        ValidateIssuer = false,
+        ValidateAudience = false,
+        ClockSkew = TimeSpan.Zero
+    };
+    options.Events = new JwtBearerEvents
+    {
+        OnTokenValidated = context =>
+        {
+            if (context.Principal?.Identity is ClaimsIdentity identity)
+            {
+                string? role = null;
+
+                // 1. Extraer el rol desde el claim app_metadata (JSON: "role")
+                var appMetadataClaim = identity.FindFirst("app_metadata")?.Value;
+                if (!string.IsNullOrWhiteSpace(appMetadataClaim))
+                {
+                    try
+                    {
+                        using var doc = JsonDocument.Parse(appMetadataClaim);
+                        if (doc.RootElement.TryGetProperty("role", out var roleElem) && roleElem.ValueKind == JsonValueKind.String)
+                        {
+                            role = roleElem.GetString();
+                        }
+                    }
+                    catch
+                    {
+                        // Fallback silencioso si app_metadata no es un JSON válido
+                    }
+                }
+
+                // 2. Extraer rol alternativo desde claims sueltos ("user_role", "role" o ClaimTypes.Role)
+                if (string.IsNullOrWhiteSpace(role))
+                {
+                    role = identity.FindFirst("user_role")?.Value
+                        ?? identity.FindFirst("role")?.Value
+                        ?? identity.FindFirst(ClaimTypes.Role)?.Value;
+                }
+
+                var normalizedRole = (role ?? "user").Trim().ToLowerInvariant();
+                if (normalizedRole != "admin" && normalizedRole != "user")
+                {
+                    normalizedRole = "user";
+                }
+
+                // Limpiar claims de rol existentes para evitar colisiones
+                var existingRoleClaims = identity.FindAll(ClaimTypes.Role).ToList();
+                foreach (var rc in existingRoleClaims)
+                {
+                    identity.RemoveClaim(rc);
+                }
+
+                // Asignar rol como ClaimTypes.Role (segregación estricta ADR-0003)
+                identity.AddClaim(new Claim(ClaimTypes.Role, normalizedRole));
+            }
+
+            return Task.CompletedTask;
+        }
+    };
+});
+
+// 4. Políticas de Autorización RBAC
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AdminOnly", p => p.RequireRole("admin"));
+    options.AddPolicy("UserOnly", p => p.RequireRole("user"));
+});
+
 builder.Services.AddProblemDetails();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -83,18 +145,21 @@ app.MapGet("/health", () => Results.Ok(new
     timestamp = DateTime.UtcNow
 })).WithTags("Diagnóstico");
 
-// Registrar Endpoints de Módulos
-app.MapHealthEndpoints();
-app.MapHabitEndpoints();
-app.MapDailyHubEndpoints();
-app.MapNoteEndpoints();
-app.MapWorkEndpoints();
-app.MapAcademicEndpoints();
-app.MapCareerPlanEndpoints();
-app.MapAiEndpoints();
-app.MapProfileEndpoints();
-app.MapFinanceEndpoints();
-app.MapFitnessEndpoints();
+// Registrar Endpoints de Módulos del Life OS protegidos con política UserOnly
+app.MapHealthEndpoints().RequireAuthorization("UserOnly");
+app.MapHabitEndpoints().RequireAuthorization("UserOnly");
+app.MapDailyHubEndpoints().RequireAuthorization("UserOnly");
+app.MapNoteEndpoints().RequireAuthorization("UserOnly");
+app.MapWorkEndpoints().RequireAuthorization("UserOnly");
+app.MapAcademicEndpoints().RequireAuthorization("UserOnly");
+app.MapCareerPlanEndpoints().RequireAuthorization("UserOnly");
+app.MapAiEndpoints().RequireAuthorization("UserOnly");
+app.MapProfileEndpoints().RequireAuthorization("UserOnly");
+app.MapFinanceEndpoints().RequireAuthorization("UserOnly");
+app.MapFitnessEndpoints().RequireAuthorization("UserOnly");
+
+// Registrar Endpoints de Administración
+app.MapAdminEndpoints();
 
 // Aplicar migraciones pendientes de EF Core automáticamente en la base de datos
 using (var scope = app.Services.CreateScope())

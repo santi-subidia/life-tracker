@@ -18,13 +18,15 @@ import {
   Award,
   BarChart3,
   CheckCircle2,
-  Edit3
+  Edit3,
+  LogOut,
 } from "lucide-react";
 import {
   LifeTrackerApiClient,
   type ProfileSummary,
   type UserProfileSettings
 } from "@/lib/api-client";
+import { useAuth } from "@/contexts/AuthContext";
 
 type PeriodFilter = "week" | "month" | "year";
 
@@ -95,6 +97,7 @@ const DEMO_SUMMARIES: Record<PeriodFilter, ProfileSummary> = {
 };
 
 export default function ProfilePage() {
+  const { user, fullName, signOut } = useAuth();
   const [profile, setProfile] = useState<UserProfileSettings>({
     name: "Subi",
     title: "Software Engineer & Student",
@@ -112,14 +115,16 @@ export default function ProfilePage() {
   const [editBio, setEditBio] = useState("Construyendo sistemas de alto rendimiento y hábitos de acero.");
   const [savedSuccess, setSavedSuccess] = useState(false);
 
-  // Load profile from localStorage on mount
+  // Load profile from localStorage or auth on mount
   useEffect(() => {
     const p = LifeTrackerApiClient.getUserProfile();
-    setProfile(p);
-    setEditName(p.name);
+    const effectiveName = user?.user_metadata?.full_name || fullName || p.name;
+    const initialProfile = { ...p, name: effectiveName };
+    setProfile(initialProfile);
+    setEditName(effectiveName);
     setEditTitle(p.title || "Software Engineer & Student");
     setEditBio(p.bio || "");
-  }, []);
+  }, [user, fullName]);
 
   // Fetch summary when period changes
   useEffect(() => {
@@ -271,19 +276,31 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setEditName(profile.name);
-                  setEditTitle(profile.title || "");
-                  setEditBio(profile.bio || "");
-                  setIsEditing(true);
-                }}
-                className="px-4 py-2 rounded-xl bg-neutral-800/90 hover:bg-neutral-700 text-xs font-semibold text-neutral-200 hover:text-white border border-neutral-700/60 transition flex items-center gap-2 active:scale-95 self-start sm:self-center"
-              >
-                <Edit3 className="w-3.5 h-3.5 text-amber-400" />
-                <span>Editar Nombre & Perfil</span>
-              </button>
+              <div className="flex items-center gap-2.5 self-start sm:self-center flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditName(profile.name);
+                    setEditTitle(profile.title || "");
+                    setEditBio(profile.bio || "");
+                    setIsEditing(true);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-neutral-800/90 hover:bg-neutral-700 text-xs font-semibold text-neutral-200 hover:text-white border border-neutral-700/60 transition flex items-center gap-2 active:scale-95 cursor-pointer"
+                >
+                  <Edit3 className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Editar Nombre & Perfil</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => signOut()}
+                  className="px-3.5 py-2 rounded-xl bg-neutral-900 hover:bg-rose-950/30 text-xs font-semibold text-neutral-400 hover:text-rose-300 border border-neutral-800 hover:border-rose-500/40 transition flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                  title="Cerrar sesión en SOMA"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>Cerrar Sesión</span>
+                </button>
+              </div>
             </div>
           ) : (
             /* Edit Form */

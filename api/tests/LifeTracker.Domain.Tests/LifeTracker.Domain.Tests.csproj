@@ -22,6 +22,7 @@
     <ProjectReference Include="..\..\src\LifeTracker.Domain\LifeTracker.Domain.csproj" />
     <ProjectReference Include="..\..\src\LifeTracker.Application\LifeTracker.Application.csproj" />
     <ProjectReference Include="..\..\src\LifeTracker.Infrastructure\LifeTracker.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\LifeTracker.Api\LifeTracker.Api.csproj" />
   </ItemGroup>
 
   <ItemGroup>

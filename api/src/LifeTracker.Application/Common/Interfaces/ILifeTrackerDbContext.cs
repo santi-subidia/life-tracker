@@ -6,6 +6,7 @@ using LifeTracker.Domain.Fitness;
 using LifeTracker.Domain.Habits;
 using LifeTracker.Domain.Health;
 using LifeTracker.Domain.Notes;
+using LifeTracker.Domain.Profiles;
 using LifeTracker.Domain.Timeline;
 using LifeTracker.Domain.Work;
 
@@ -40,6 +41,7 @@ public interface ILifeTrackerDbContext
     DbSet<RoutineExercise> RoutineExercises { get; }
     DbSet<WorkoutSession> WorkoutSessions { get; }
     DbSet<WorkoutSet> WorkoutSets { get; }
+    DbSet<UserProfile> Profiles { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

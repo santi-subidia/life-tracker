@@ -97,7 +97,7 @@ export function RichToolCards({ toolResultsJson, toolCallsJson }: RichToolCardsP
           );
         }
 
-        if (toolName === "get_habits_status" || toolName === "toggle_habit") {
+        if (toolName === "get_habits_status" || toolName === "toggle_habit" || toolName === "create_habit") {
           return (
             <HabitsCard
               key={callId}
@@ -300,9 +300,15 @@ function HealthSummaryCard({ data, success, errorMessage }: CardSubProps) {
 // 2. Hábitos: HabitsCard
 // -----------------------------------------------------------------------------
 function HabitsCard({ toolName, data, success, errorMessage }: CardSubProps & { toolName: string }) {
+  const isCreate = toolName === "create_habit";
   const isToggle = toolName === "toggle_habit";
   const habits = (data.habits || data.Habits) as Array<Record<string, unknown>> | undefined;
   const completionPercentage = (data.completionPercentage ?? data.CompletionPercentage) as number | undefined;
+
+  const habitName = (data.name || data.Name) as string | undefined;
+  const category = (data.category || data.Category) as string | undefined;
+  const frequency = (data.frequency || data.Frequency) as Record<string, unknown> | undefined;
+  const frequencyType = (frequency?.type || frequency?.Type || "daily") as string;
 
   return (
     <div className="rounded-xl bg-zinc-900/90 border border-emerald-500/20 p-3.5 shadow-sm space-y-2.5">
@@ -313,10 +319,10 @@ function HabitsCard({ toolName, data, success, errorMessage }: CardSubProps & { 
           </div>
           <div>
             <h4 className="text-xs font-semibold text-zinc-200">
-              {isToggle ? "Hábito Actualizado" : "Hábitos & Consistencia"}
+              {isCreate ? "Hábito Creado" : isToggle ? "Hábito Actualizado" : "Hábitos & Consistencia"}
             </h4>
             <span className="text-[10px] text-zinc-400">
-              {isToggle ? "Registro de cumplimiento sincronizado" : "Estado diario y rachas"}
+              {isCreate ? "Nuevo hábito activo en tu rutina" : isToggle ? "Registro de cumplimiento sincronizado" : "Estado diario y rachas"}
             </span>
           </div>
         </div>
@@ -332,6 +338,25 @@ function HabitsCard({ toolName, data, success, errorMessage }: CardSubProps & { 
 
       {errorMessage ? (
         <p className="text-xs text-rose-400">{errorMessage}</p>
+      ) : isCreate ? (
+        <div className="p-2.5 rounded-lg bg-black/40 border border-zinc-800 flex items-center justify-between text-xs">
+          <div className="flex items-center gap-2 truncate">
+            <div className="w-5 h-5 rounded-md bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-bold shrink-0">
+              <Sparkles className="w-3 h-3" />
+            </div>
+            <div className="truncate">
+              <span className="text-zinc-200 font-medium truncate block">{habitName ?? "Nuevo hábito"}</span>
+              {category && (
+                <span className="text-[10px] text-zinc-500">
+                  {category} • {frequencyType === "daily" ? "Diario" : frequencyType}
+                </span>
+              )}
+            </div>
+          </div>
+          <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium shrink-0 ml-2">
+            Activo
+          </span>
+        </div>
       ) : isToggle ? (
         <div className="p-2.5 rounded-lg bg-black/40 border border-zinc-800 flex items-center justify-between text-xs">
           <div className="flex items-center gap-2">

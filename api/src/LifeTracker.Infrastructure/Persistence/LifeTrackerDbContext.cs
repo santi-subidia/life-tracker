@@ -7,6 +7,7 @@ using LifeTracker.Domain.Fitness;
 using LifeTracker.Domain.Habits;
 using LifeTracker.Domain.Health;
 using LifeTracker.Domain.Notes;
+using LifeTracker.Domain.Profiles;
 using LifeTracker.Domain.Timeline;
 using LifeTracker.Domain.Work;
 
@@ -46,6 +47,7 @@ public class LifeTrackerDbContext : DbContext, ILifeTrackerDbContext
     public DbSet<RoutineExercise> RoutineExercises => Set<RoutineExercise>();
     public DbSet<WorkoutSession> WorkoutSessions => Set<WorkoutSession>();
     public DbSet<WorkoutSet> WorkoutSets => Set<WorkoutSet>();
+    public DbSet<UserProfile> Profiles => Set<UserProfile>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

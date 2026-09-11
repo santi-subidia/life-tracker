@@ -122,6 +122,25 @@ public class AiToolDispatcher : IAiToolDispatcher
             }
         ),
         new(
+            "create_habit",
+            "Crea un nuevo hábito para que el usuario pueda trackear su constancia y rachas diarias o semanales.",
+            new
+            {
+                type = "OBJECT",
+                properties = new
+                {
+                    name = new { type = "STRING", description = "Nombre del hábito (ej: 'Lectura nocturna', 'Tomar 2L de agua', 'Meditar 10 min')." },
+                    description = new { type = "STRING", description = "Descripción o motivo opcional del hábito." },
+                    category = new { type = "STRING", description = "Categoría del hábito: 'Salud', 'Productividad', 'Estudio', 'Bienestar', 'General'. Por defecto 'General'." },
+                    frequencyType = new { type = "STRING", description = "Frecuencia del hábito: 'daily' (diario, por defecto), 'specific_days' (días específicos de la semana), o 'times_per_week' (veces por semana)." },
+                    targetDaysPerWeek = new { type = "INTEGER", description = "Meta de días por semana si frequencyType es 'times_per_week' (ej: 3, 5)." },
+                    color = new { type = "STRING", description = "Color hexadecimal para identificar el hábito (ej: '#10b981', '#6366f1')." },
+                    icon = new { type = "STRING", description = "Icono representativo (ej: 'book-open', 'activity', 'dumbbell', 'check')." }
+                },
+                required = new[] { "name" }
+            }
+        ),
+        new(
             "create_work_task",
             "Crea una nueva tarea en el tablero Kanban de Trabajo con prioridad, fecha límite y proyecto opcional.",
             new
@@ -365,6 +384,28 @@ public class AiToolDispatcher : IAiToolDispatcher
                     var req = new ToggleHabitRequest(date, null);
                     var res = await _habitService.ToggleHabitCompletionAsync(userId, habitId.Value, req, ct);
                     return new AiToolExecutionResult(request.CallId, request.ToolName, true, res);
+                }
+
+                case "create_habit":
+                {
+                    var name = GetString(args, "name");
+                    if (string.IsNullOrWhiteSpace(name))
+                        return new AiToolExecutionResult(request.CallId, request.ToolName, false, null, "El parámetro 'name' es requerido.");
+
+                    var description = GetString(args, "description");
+                    var category = GetString(args, "category") ?? "General";
+                    var frequencyType = (GetString(args, "frequencyType") ?? "daily").Trim().ToLowerInvariant();
+                    if (frequencyType != "daily" && frequencyType != "specific_days" && frequencyType != "times_per_week")
+                    {
+                        frequencyType = "daily";
+                    }
+                    var targetDaysPerWeek = GetInt(args, "targetDaysPerWeek");
+                    var color = GetString(args, "color") ?? "#10b981";
+                    var icon = GetString(args, "icon") ?? "check";
+
+                    var req = new CreateHabitRequest(name.Trim(), description, category, frequencyType, targetDaysPerWeek, null, color, icon);
+                    var habit = await _habitService.CreateHabitAsync(userId, req, ct);
+                    return new AiToolExecutionResult(request.CallId, request.ToolName, true, habit);
                 }
 
                 case "create_work_task":
