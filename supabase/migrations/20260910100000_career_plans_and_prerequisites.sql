@@ -22,7 +22,7 @@ END $$;
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.career_plans (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL,
     name TEXT NOT NULL,
     university TEXT,
     total_subjects INTEGER DEFAULT 0 NOT NULL,
@@ -42,7 +42,7 @@ CREATE INDEX IF NOT EXISTS idx_career_plans_user_active
 CREATE TABLE IF NOT EXISTS public.curriculum_subjects (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     career_plan_id UUID NOT NULL REFERENCES public.career_plans(id) ON DELETE CASCADE,
-    user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL,
     code TEXT,
     name TEXT NOT NULL,
     year_level INTEGER NOT NULL,
@@ -69,7 +69,7 @@ CREATE INDEX IF NOT EXISTS idx_curriculum_subjects_user
 CREATE TABLE IF NOT EXISTS public.curriculum_prerequisites (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     career_plan_id UUID NOT NULL REFERENCES public.career_plans(id) ON DELETE CASCADE,
-    user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL,
     subject_id UUID NOT NULL REFERENCES public.curriculum_subjects(id) ON DELETE CASCADE,
     required_subject_id UUID NOT NULL REFERENCES public.curriculum_subjects(id) ON DELETE CASCADE,
     requirement_type public.prerequisite_requirement_type NOT NULL,

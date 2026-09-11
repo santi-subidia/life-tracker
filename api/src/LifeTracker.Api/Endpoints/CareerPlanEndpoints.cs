@@ -10,7 +10,6 @@ public static class CareerPlanEndpoints
     public static RouteGroupBuilder MapCareerPlanEndpoints(this IEndpointRouteBuilder routes)
     {
         var group = routes.MapGroup("/api/academics/career-plans")
-            .RequireAuthorization()
             .WithTags("CareerPlans");
 
         // 1. Extraer borrador efímero con IA (Human-in-the-Loop)
