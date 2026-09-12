@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using LifeTracker.Application.Common.Interfaces;
 using LifeTracker.Application.Health.Dtos;
 using LifeTracker.Application.Health.Services;
+using LifeTracker.Api.Extensions;
 
 namespace LifeTracker.Api.Endpoints;
 
@@ -110,7 +111,7 @@ public static class HealthEndpoints
             {
                 return Results.Json(new { error = ex.Message }, statusCode: 502);
             }
-        }).DisableAntiforgery();
+        }).DisableAntiforgery().RequireRateLimiting(RateLimitingExtensions.PolicyAiAssistant);
 
         // 2. Guardar estudio confirmado
         group.MapPost("/studies", async (

@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using LifeTracker.Application.Ai.Dtos;
 using LifeTracker.Application.Ai.Services;
+using LifeTracker.Api.Extensions;
 
 namespace LifeTracker.Api.Endpoints;
 
@@ -58,7 +59,7 @@ public static class AiEndpoints
             var userId = GetUserId(httpContext);
             var turnResult = await aiService.ProcessUserMessageAsync(id, userId, request, ct);
             return Results.Ok(turnResult);
-        });
+        }).RequireRateLimiting(RateLimitingExtensions.PolicyAiAssistant);
 
         // 5. Actualizar título de la conversación
         group.MapPatch("/conversations/{id:guid}/title", async (
