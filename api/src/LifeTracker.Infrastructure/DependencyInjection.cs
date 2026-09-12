@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -45,6 +46,22 @@ public static class DependencyInjection
         }
 
         services.AddScoped<ILifeTrackerDbContext>(provider => provider.GetRequiredService<LifeTrackerDbContext>());
+
+        // ASP.NET Core Identity & Token Generation
+        services.AddIdentityCore<LifeTracker.Infrastructure.Identity.ApplicationUser>(options =>
+        {
+            options.Password.RequireDigit = false;
+            options.Password.RequireLowercase = false;
+            options.Password.RequireUppercase = false;
+            options.Password.RequireNonAlphanumeric = false;
+            options.Password.RequiredLength = 6;
+            options.User.RequireUniqueEmail = true;
+        })
+        .AddRoles<LifeTracker.Infrastructure.Identity.ApplicationRole>()
+        .AddEntityFrameworkStores<LifeTrackerDbContext>()
+        .AddDefaultTokenProviders();
+
+        services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 
         // Storage & AI
         services.AddSingleton<IStorageService, CloudflareR2StorageService>();

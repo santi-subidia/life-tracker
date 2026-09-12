@@ -246,6 +246,7 @@ export default function SomaDashboardPage() {
   const pillarsNav = [
     {
       name: "Salud",
+      shortName: "Salud",
       desc: "Métricas de sueño, peso y energía",
       href: "/salud",
       icon: Activity,
@@ -254,6 +255,7 @@ export default function SomaDashboardPage() {
     },
     {
       name: "Hábitos",
+      shortName: "Hábitos",
       desc: "Rutinas y consistencia diaria",
       href: "/habitos",
       icon: CheckCircle2,
@@ -262,6 +264,7 @@ export default function SomaDashboardPage() {
     },
     {
       name: "Segundo Cerebro",
+      shortName: "Notas",
       desc: "Notas, ideas y base de conocimiento",
       href: "/notas",
       icon: BookOpen,
@@ -270,6 +273,7 @@ export default function SomaDashboardPage() {
     },
     {
       name: "Trabajo & Foco",
+      shortName: "Trabajo",
       desc: "Pomodoro, proyectos y tareas",
       href: "/trabajo",
       icon: Briefcase,
@@ -278,6 +282,7 @@ export default function SomaDashboardPage() {
     },
     {
       name: "Academia",
+      shortName: "Academia",
       desc: "Cursos, exámenes y progreso",
       href: "/academia",
       icon: GraduationCap,
@@ -286,6 +291,7 @@ export default function SomaDashboardPage() {
     },
     {
       name: "Finanzas",
+      shortName: "Finanzas",
       desc: "Control de gastos y presupuestos",
       href: "/finanzas",
       icon: Wallet,
@@ -294,6 +300,7 @@ export default function SomaDashboardPage() {
     },
     {
       name: "Entrenamientos",
+      shortName: "Fitness",
       desc: "Gimnasio, rutinas y sobrecarga progresiva",
       href: "/entrenamientos",
       icon: Dumbbell,
@@ -302,6 +309,7 @@ export default function SomaDashboardPage() {
     },
     {
       name: "Asistente AI",
+      shortName: "Asistente",
       desc: "Copiloto inteligente del sistema",
       href: "/asistente",
       icon: Sparkles,
@@ -323,21 +331,17 @@ export default function SomaDashboardPage() {
             <SomaLogo href="/" size="sm" />
           </div>
 
-          {/* Module Links (Desktop) */}
-          <nav className="hidden md:flex items-center gap-1">
-            {pillarsNav.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium text-neutral-400 hover:bg-neutral-900/80 ${item.accent} transition flex items-center gap-1.5`}
-                >
-                  <Icon className="w-3.5 h-3.5" />
-                  <span>{item.name}</span>
-                </Link>
-              );
-            })}
+          {/* Module Links (Desktop - Clean Typography, No Icons) */}
+          <nav className="hidden md:flex items-center gap-0.5 lg:gap-1">
+            {pillarsNav.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="px-2.5 py-1 rounded-md text-xs font-medium text-neutral-400 hover:text-white hover:bg-neutral-900/90 transition-colors"
+              >
+                {item.shortName}
+              </Link>
+            ))}
           </nav>
 
           {/* Right Actions: User Profile, Logout & Mobile Menu Toggle */}
@@ -504,62 +508,66 @@ export default function SomaDashboardPage() {
           </div>
         </section>
 
-        {/* Check-in Diario (Ánimo & Energía) */}
-        <section className="p-5 rounded-2xl bg-neutral-900/50 border border-neutral-800/80 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xs font-semibold text-neutral-300 uppercase tracking-wider flex items-center gap-2">
+        {/* Check-in Diario Compacto (Ánimo & Energía) */}
+        <section className="p-3.5 sm:p-4 rounded-xl bg-neutral-900/40 border border-neutral-800/70 flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="flex items-center justify-between md:justify-start gap-2 shrink-0">
+            <div className="flex items-center gap-2">
               <Smile className="w-4 h-4 text-amber-400" />
-              Check-in de la Jornada
-            </h2>
+              <span className="text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                Check-in Diario
+              </span>
+            </div>
             {savingCheckin && (
-              <span className="text-[11px] text-neutral-500 animate-pulse">Sincronizando...</span>
+              <span className="text-[10px] text-neutral-500 animate-pulse font-mono">Guardando...</span>
             )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 text-xs">
             {/* Ánimo */}
-            <div className="space-y-1.5">
-              <span className="text-[11px] text-neutral-400">Estado de Ánimo</span>
-              <div className="flex items-center justify-between gap-1 bg-neutral-950/80 p-1.5 rounded-xl border border-neutral-800/80">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] uppercase font-semibold tracking-wider text-neutral-500 shrink-0">
+                Ánimo:
+              </span>
+              <div className="flex items-center gap-1 bg-neutral-950/70 p-1 rounded-lg border border-neutral-800/80">
                 {moodOptions.map((opt) => (
                   <button
                     key={opt.score}
                     type="button"
+                    title={opt.label}
                     onClick={() => handleScoreChange(opt.score, energy)}
-                    className={`flex-1 py-1.5 rounded-lg text-sm transition flex flex-col items-center gap-0.5 ${
+                    className={`px-2 py-1 rounded-md text-xs transition flex items-center gap-1 ${
                       mood === opt.score
-                        ? "bg-amber-500/20 text-amber-300 border border-amber-500/30 shadow-sm"
-                        : "text-neutral-400 hover:text-white hover:bg-neutral-900"
+                        ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                        : "text-neutral-400 hover:text-white hover:bg-neutral-900/80"
                     }`}
                   >
-                    <span className="text-base">{opt.emoji}</span>
-                    <span className="text-[9px] uppercase tracking-wider font-medium">
-                      {opt.label}
-                    </span>
+                    <span>{opt.emoji}</span>
+                    <span className="hidden xl:inline text-[10px]">{opt.label}</span>
                   </button>
                 ))}
               </div>
             </div>
 
             {/* Energía */}
-            <div className="space-y-1.5">
-              <span className="text-[11px] text-neutral-400">Nivel de Energía</span>
-              <div className="flex items-center justify-between gap-1 bg-neutral-950/80 p-1.5 rounded-xl border border-neutral-800/80">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] uppercase font-semibold tracking-wider text-neutral-500 shrink-0">
+                Energía:
+              </span>
+              <div className="flex items-center gap-1 bg-neutral-950/70 p-1 rounded-lg border border-neutral-800/80">
                 {energyOptions.map((opt) => (
                   <button
                     key={opt.score}
                     type="button"
+                    title={opt.label}
                     onClick={() => handleScoreChange(mood, opt.score)}
-                    className={`flex-1 py-1.5 rounded-lg text-sm transition flex flex-col items-center gap-0.5 ${
+                    className={`px-2 py-1 rounded-md text-xs transition flex items-center gap-1 ${
                       energy === opt.score
-                        ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shadow-sm"
-                        : "text-neutral-400 hover:text-white hover:bg-neutral-900"
+                        ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                        : "text-neutral-400 hover:text-white hover:bg-neutral-900/80"
                     }`}
                   >
-                    <span className="text-base">{opt.emoji}</span>
-                    <span className="text-[9px] uppercase tracking-wider font-medium">
-                      {opt.label}
-                    </span>
+                    <span>{opt.emoji}</span>
+                    <span className="hidden xl:inline text-[10px]">{opt.label}</span>
                   </button>
                 ))}
               </div>
@@ -569,7 +577,7 @@ export default function SomaDashboardPage() {
 
         {/* Dashboard 2-Columns Grid Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Main Column: Hábitos y Timeline (7 cols) */}
+          {/* Main Column: Hábitos de Hoy (7 cols) */}
           <div className="lg:col-span-7 space-y-6">
             {/* Hábitos de 1-Toque */}
             <section className="p-5 rounded-2xl bg-neutral-900/50 border border-neutral-800/80 space-y-4">
@@ -657,47 +665,9 @@ export default function SomaDashboardPage() {
                 ))}
               </div>
             </section>
-
-            {/* Timeline Cronológico de Hoy */}
-            <section className="p-5 rounded-2xl bg-neutral-900/50 border border-neutral-800/80 space-y-3">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xs font-semibold text-neutral-300 uppercase tracking-wider flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-indigo-400" />
-                  Actividad de Hoy
-                </h2>
-                <span className="text-[11px] text-neutral-500 font-mono">
-                  {hubData?.todayTimeline.length || 0} eventos
-                </span>
-              </div>
-
-              {(!hubData?.todayTimeline || hubData.todayTimeline.length === 0) ? (
-                <div className="p-6 rounded-xl bg-neutral-950/50 border border-dashed border-neutral-800 text-center text-xs text-neutral-500">
-                  Sin actividad registrada aún hoy. Al marcar hábitos o iniciar foco, aparecerá aquí.
-                </div>
-              ) : (
-                <div className="divide-y divide-neutral-800/80 border border-neutral-800/80 rounded-xl overflow-hidden bg-neutral-950/60">
-                  {hubData.todayTimeline.map((item) => (
-                    <div key={item.id} className="p-3 flex items-start justify-between gap-4 text-xs">
-                      <div>
-                        <span className="font-medium text-neutral-200">{item.title}</span>
-                        {item.summary && (
-                          <p className="text-[11px] text-neutral-500 mt-0.5">{item.summary}</p>
-                        )}
-                      </div>
-                      <span className="text-[10px] font-mono text-neutral-500 whitespace-nowrap">
-                        {new Date(item.timestamp).toLocaleTimeString("es-ES", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
           </div>
 
-          {/* Secondary Column: Widgets de Foco, Academia, Cerebro & Salud (5 cols) */}
+          {/* Secondary Column: Trabajo, Exámenes & Asistente (5 cols) */}
           <div className="lg:col-span-5 space-y-6">
             {/* Widget: Deep Work & Trabajo */}
             <section className="p-5 rounded-2xl bg-neutral-900/50 border border-neutral-800/80 space-y-4">
@@ -810,87 +780,31 @@ export default function SomaDashboardPage() {
               )}
             </section>
 
-            {/* Quick Access to Segundo Cerebro & Salud */}
-            <div className="grid grid-cols-2 gap-3">
-              <Link
-                href="/notas"
-                className="p-4 rounded-2xl bg-neutral-900/50 border border-neutral-800/80 hover:border-neutral-700 transition flex flex-col justify-between group"
-              >
-                <div>
-                  <div className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center mb-3 border border-indigo-500/20">
-                    <BookOpen className="w-4 h-4" />
+            {/* Widget SOMA AI Asistente (Compacto & Elegante) */}
+            <section className="p-4 rounded-2xl bg-neutral-900/50 border border-purple-500/20 hover:border-purple-500/40 transition flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center shrink-0">
+                  <Sparkles className="w-4 h-4 text-purple-400" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-neutral-200">Asistente AI</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                   </div>
-                  <h3 className="text-xs font-semibold text-neutral-200 group-hover:text-white">
-                    Segundo Cerebro
-                  </h3>
-                  <p className="text-[11px] text-neutral-500 mt-0.5">Notas y enlaces tipo Obsidian</p>
+                  <p className="text-[11px] text-neutral-400 truncate mt-0.5">
+                    Consultá métricas, creá tareas o agendá exámenes
+                  </p>
                 </div>
-                <div className="flex items-center text-[11px] text-indigo-400 mt-3 font-medium">
-                  <span>Abrir notas</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </div>
-              </Link>
-
-              <Link
-                href="/salud"
-                className="p-4 rounded-2xl bg-neutral-900/50 border border-neutral-800/80 hover:border-neutral-700 transition flex flex-col justify-between group"
-              >
-                <div>
-                  <div className="w-8 h-8 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center mb-3 border border-rose-500/20">
-                    <Activity className="w-4 h-4" />
-                  </div>
-                  <h3 className="text-xs font-semibold text-neutral-200 group-hover:text-white">
-                    Salud & Estudios
-                  </h3>
-                  <p className="text-[11px] text-neutral-500 mt-0.5">Historial clínico y métricas</p>
-                </div>
-                <div className="flex items-center text-[11px] text-rose-400 mt-3 font-medium">
-                  <span>Ver análisis</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </div>
-              </Link>
-            </div>
-
-            {/* SOMA AI Executive Assistant Widget */}
-            <div className="p-5 rounded-2xl bg-gradient-to-br from-indigo-950/40 via-purple-950/30 to-neutral-900 border border-purple-500/30 space-y-3 relative overflow-hidden">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-xl bg-purple-500/20 text-purple-300 border border-purple-500/30 flex items-center justify-center">
-                    <Sparkles className="w-3.5 h-3.5" />
-                  </div>
-                  <span className="text-xs font-bold text-white uppercase tracking-wider">
-                    SOMA AI Asistente
-                  </span>
-                </div>
-                <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                  Activo
-                </span>
               </div>
-              <p className="text-xs text-neutral-300 leading-relaxed">
-                Pídele que registre ideas en notas, agende entregas o exámenes académicos, o cree tareas en tu Kanban.
-              </p>
-              <div className="space-y-1.5 pt-1">
-                <Link
-                  href="/asistente"
-                  className="block p-2 rounded-xl bg-neutral-950/60 border border-neutral-800 text-[11px] text-neutral-400 hover:text-white hover:border-purple-500/40 transition"
-                >
-                  &ldquo;Tengo un TP de matemática el próximo jueves, agrégalo como hito&rdquo;
-                </Link>
-                <Link
-                  href="/asistente"
-                  className="block p-2 rounded-xl bg-neutral-950/60 border border-neutral-800 text-[11px] text-neutral-400 hover:text-white hover:border-purple-500/40 transition"
-                >
-                  &ldquo;Escribe una nota sobre esta idea: Arquitectura de plugins...&rdquo;
-                </Link>
-              </div>
+
               <Link
                 href="/asistente"
-                className="w-full py-2.5 px-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-lg shadow-purple-600/20 active:scale-95 transition"
+                className="shrink-0 px-3 py-1.5 rounded-xl bg-purple-600/90 hover:bg-purple-500 text-white text-xs font-semibold transition active:scale-95 flex items-center gap-1.5"
               >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Abrir Chat con Asistente</span>
+                <span>Abrir</span>
+                <ChevronRight className="w-3.5 h-3.5" />
               </Link>
-            </div>
+            </section>
           </div>
         </div>
       </main>

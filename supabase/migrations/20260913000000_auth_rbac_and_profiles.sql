@@ -7,8 +7,18 @@
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- ==============================================================================
--- 1. ALTERACIÓN DE PUBLIC.PROFILES
+-- 1. TABLA PUBLIC.PROFILES (CREACIÓN / ALTERACIÓN IDEMPOTENTE)
 -- ==============================================================================
+CREATE TABLE IF NOT EXISTS public.profiles (
+    id UUID REFERENCES auth.users ON DELETE CASCADE NOT NULL PRIMARY KEY,
+    email TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'user',
+    full_name TEXT,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 ALTER TABLE public.profiles 
     ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user',
     ADD COLUMN IF NOT EXISTS full_name TEXT,

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using LifeTracker.Application.Common.Interfaces;
 using LifeTracker.Domain.Academics;
@@ -10,10 +11,11 @@ using LifeTracker.Domain.Notes;
 using LifeTracker.Domain.Profiles;
 using LifeTracker.Domain.Timeline;
 using LifeTracker.Domain.Work;
+using LifeTracker.Infrastructure.Identity;
 
 namespace LifeTracker.Infrastructure.Persistence;
 
-public class LifeTrackerDbContext : DbContext, ILifeTrackerDbContext
+public class LifeTrackerDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, Guid>, ILifeTrackerDbContext
 {
     public LifeTrackerDbContext(DbContextOptions<LifeTrackerDbContext> options)
         : base(options)

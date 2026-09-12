@@ -1,60 +1,16 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createServerClient } from "@supabase/ssr";
 
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
-  });
-
-  const supabaseUrl =
-    process.env.NEXT_PUBLIC_SUPABASE_URL ||
-    process.env.SUPABASE_URL ||
-    "https://your-project.supabase.co";
-
-  const supabaseAnonKey =
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    process.env.SUPABASE_ANON_KEY ||
-    "your-supabase-anon-key";
-
-  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      getAll() {
-        return request.cookies.getAll();
-      },
-      setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value }) =>
-          request.cookies.set(name, value)
-        );
-        response = NextResponse.next({
-          request: {
-            headers: request.headers,
-          },
-        });
-        cookiesToSet.forEach(({ name, value, options }) =>
-          response.cookies.set(name, value, options)
-        );
-      },
-    },
-  });
-
-  // Refrescar y validar sesión usando getUser() de Supabase
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+  const token = request.cookies.get("soma_token")?.value;
+  const rawRole = request.cookies.get("soma_role")?.value;
+  const role = rawRole ? rawRole.toLowerCase() : "user";
   const { pathname } = request.nextUrl;
 
-  // Helper para redireccionar preservando cookies de sesión actualizadas
-  const redirectWithCookies = (destination: string) => {
+  // Helper para redireccionar
+  const redirect = (destination: string) => {
     const url = request.nextUrl.clone();
     url.pathname = destination;
-    const redirectRes = NextResponse.redirect(url);
-    response.cookies.getAll().forEach((cookie) => {
-      redirectRes.cookies.set(cookie.name, cookie.value, cookie);
-    });
-    return redirectRes;
+    return NextResponse.redirect(url);
   };
 
   // Rutas públicas y recursos estáticos
@@ -67,17 +23,13 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/brand") ||
     pathname.includes(".");
 
-  // 1. Si NO hay sesión y la ruta es protegida -> redirige a /login
-  if (!user && !isPublicRoute) {
-    return redirectWithCookies("/login");
+  // 1. Si NO hay token y la ruta es protegida -> redirige a /login
+  if (!token && !isPublicRoute) {
+    return redirect("/login");
   }
 
-  // 2. Si hay sesión activa: aplicar RBAC
-  if (user) {
-    const rawRole =
-      user.app_metadata?.role || user.user_metadata?.role || "user";
-    const role = String(rawRole).toLowerCase();
-
+  // 2. Si hay token activo: aplicar RBAC
+  if (token) {
     const isLifeOsRoute =
       pathname === "/" ||
       pathname === "/hoy" ||
@@ -104,22 +56,22 @@ export async function middleware(request: NextRequest) {
     if (role === "admin") {
       // Si es admin: Al entrar a /login o rutas del Life OS -> redirige a /admin
       if (pathname === "/login" || isLifeOsRoute) {
-        return redirectWithCookies("/admin");
+        return redirect("/admin");
       }
     } else {
       // Si es user:
       // Al entrar a /login -> redirige a /hoy
       if (pathname === "/login") {
-        return redirectWithCookies("/hoy");
+        return redirect("/hoy");
       }
       // Al intentar entrar a /admin o /admin/* -> redirige a /hoy
       if (pathname === "/admin" || pathname.startsWith("/admin/")) {
-        return redirectWithCookies("/hoy");
+        return redirect("/hoy");
       }
     }
   }
 
-  return response;
+  return NextResponse.next();
 }
 
 export const config = {

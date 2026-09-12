@@ -916,6 +916,21 @@ export interface ResetAdminUserPasswordPayload {
   newPassword: string;
 }
 
+export interface LoginResponse {
+  token: string;
+  role: "admin" | "user";
+  fullName: string;
+  email: string;
+  userId: string;
+}
+
+export interface UserInfoResponse {
+  userId: string;
+  email: string;
+  fullName: string;
+  role: "admin" | "user";
+}
+
 // ==============================================================================
 // API CLIENT IMPLEMENTATION
 // ==============================================================================
@@ -934,6 +949,39 @@ export class LifeTrackerApiClient {
       headers["Authorization"] = `Bearer ${activeToken}`;
     }
     return headers;
+  }
+
+  // --- AUTH (ASP.NET Core Identity) ---
+
+  static async login(email: string, password: string): Promise<LoginResponse> {
+    const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || err.message || "Credenciales incorrectas o cuenta inactiva.");
+    }
+
+    return res.json();
+  }
+
+  static async getMe(token?: string): Promise<UserInfoResponse> {
+    const res = await fetch(`${API_BASE_URL}/api/auth/me`, {
+      method: "GET",
+      headers: this.getHeaders(token),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || err.message || "No autorizado");
+    }
+
+    return res.json();
   }
 
   // --- ADMIN & RBAC ---
