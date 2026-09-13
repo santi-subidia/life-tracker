@@ -25,7 +25,9 @@ public class JwtTokenGenerator : IJwtTokenGenerator
     public string GenerateToken(Guid userId, string email, string? fullName, IEnumerable<string> roles)
     {
         var secret = _configuration["Jwt:SecretKey"]
+                     ?? _configuration["Supabase:JwtSecret"]
                      ?? Environment.GetEnvironmentVariable("JWT_SECRET_KEY")
+                     ?? Environment.GetEnvironmentVariable("SUPABASE_JWT_SECRET")
                      ?? DefaultSecretKey;
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));

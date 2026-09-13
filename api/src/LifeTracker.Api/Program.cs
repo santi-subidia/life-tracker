@@ -7,6 +7,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using LifeTracker.Api.Endpoints;
 using LifeTracker.Api.Extensions;
+using LifeTracker.Application.Common.Interfaces;
+using LifeTracker.Domain.Profiles;
 using LifeTracker.Infrastructure;
 
 LoadDotEnv();
@@ -16,15 +18,33 @@ var builder = WebApplication.CreateBuilder(args);
 // 1. Inyección de dependencias de Infraestructura y Aplicación
 builder.Services.AddInfrastructureServices(builder.Configuration);
 
-// 2. CORS para desarrollo con Next.js en puerto 3000
+// 2. CORS dinámico configurable
+var corsOriginsConfig = builder.Configuration["Cors:AllowedOrigins"]
+                        ?? Environment.GetEnvironmentVariable("CORS_ALLOWED_ORIGINS");
+
+var allowedOrigins = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+{
+    "http://localhost:3000",
+    "https://localhost:3000"
+};
+
+if (!string.IsNullOrWhiteSpace(corsOriginsConfig))
+{
+    var customOrigins = corsOriginsConfig.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    foreach (var origin in customOrigins)
+    {
+        if (!string.IsNullOrWhiteSpace(origin))
+        {
+            allowedOrigins.Add(origin);
+        }
+    }
+}
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins(
-                "http://localhost:3000",
-                "https://localhost:3000"
-            )
+        policy.WithOrigins(allowedOrigins.ToArray())
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
@@ -33,7 +53,9 @@ builder.Services.AddCors(options =>
 
 // 3. Autenticación JWT con ASP.NET Core Identity
 var jwtSecret = builder.Configuration["Jwt:SecretKey"] 
+                ?? builder.Configuration["Supabase:JwtSecret"]
                 ?? Environment.GetEnvironmentVariable("JWT_SECRET_KEY")
+                ?? Environment.GetEnvironmentVariable("SUPABASE_JWT_SECRET")
                 ?? LifeTracker.Infrastructure.Auth.JwtTokenGenerator.DefaultSecretKey;
 
 var signingKey = Encoding.UTF8.GetBytes(jwtSecret);
@@ -123,14 +145,42 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
 
-// Health Check Endpoint
-app.MapGet("/health", () => Results.Ok(new
+// Health Check Endpoint con diagnóstico profundo de base de datos
+app.MapGet("/health", async (ILifeTrackerDbContext dbContext) =>
 {
-    status = "Healthy",
-    service = "LifeTracker.Api",
-    runtime = ".NET 10",
-    timestamp = DateTime.UtcNow
-})).WithTags("Diagnóstico").RequireRateLimiting(RateLimitingExtensions.PolicyGeneralApi);
+    try
+    {
+        var canConnect = await ((DbContext)dbContext).Database.CanConnectAsync();
+        if (canConnect)
+        {
+            return Results.Ok(new
+            {
+                status = "Healthy",
+                database = "Connected",
+                timestamp = DateTime.UtcNow,
+                service = "Soma Life OS API"
+            });
+        }
+
+        return Results.Json(new
+        {
+            status = "Degraded",
+            database = "Disconnected",
+            timestamp = DateTime.UtcNow,
+            service = "Soma Life OS API"
+        }, statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+    catch
+    {
+        return Results.Json(new
+        {
+            status = "Degraded",
+            database = "Disconnected",
+            timestamp = DateTime.UtcNow,
+            service = "Soma Life OS API"
+        }, statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+}).WithTags("Diagnóstico").RequireRateLimiting(RateLimitingExtensions.PolicyGeneralApi);
 
 // Registrar Endpoints de Autenticación (ASP.NET Core Identity)
 app.MapAuthEndpoints();
@@ -246,20 +296,52 @@ using (var scope = app.Services.CreateScope())
             }
         }
 
+        // Parametrización de credenciales de admin inicial
+        var adminEmail = Environment.GetEnvironmentVariable("INITIAL_ADMIN_EMAIL")
+                         ?? builder.Configuration["InitialAdmin:Email"]
+                         ?? "admin@soma.local";
+        var adminPassword = Environment.GetEnvironmentVariable("INITIAL_ADMIN_PASSWORD")
+                            ?? builder.Configuration["InitialAdmin:Password"]
+                            ?? "Admin123!#Soma";
+
         // Asegurar usuario administrador inicial
-        var adminUser = userManager.FindByEmailAsync("admin@soma.local").GetAwaiter().GetResult();
+        var adminUser = userManager.FindByEmailAsync(adminEmail).GetAwaiter().GetResult();
         if (adminUser == null)
         {
             adminUser = new LifeTracker.Infrastructure.Identity.ApplicationUser
             {
-                UserName = "admin@soma.local",
-                Email = "admin@soma.local",
+                UserName = adminEmail,
+                Email = adminEmail,
                 EmailConfirmed = true,
                 FullName = "Administrador SOMA",
                 IsActive = true
             };
-            userManager.CreateAsync(adminUser, "Admin123!#Soma").GetAwaiter().GetResult();
+            userManager.CreateAsync(adminUser, adminPassword).GetAwaiter().GetResult();
             userManager.AddToRoleAsync(adminUser, "admin").GetAwaiter().GetResult();
+        }
+
+        // Sincronizar también el UserProfile en dbContext.Profiles (o asegurar que exista)
+        var adminProfile = db.Profiles.FirstOrDefault(p => p.Id == adminUser.Id);
+        if (adminProfile == null)
+        {
+            adminProfile = new UserProfile(
+                adminUser.Id,
+                adminUser.Email ?? adminEmail,
+                role: "admin",
+                fullName: adminUser.FullName ?? "Administrador SOMA",
+                isActive: true
+            );
+            db.Profiles.Add(adminProfile);
+            db.SaveChanges();
+        }
+        else
+        {
+            if (adminProfile.Role != "admin" || !adminProfile.IsActive)
+            {
+                adminProfile.UpdateRole("admin");
+                adminProfile.SetActive(true);
+                db.SaveChanges();
+            }
         }
     }
     catch (Exception ex)

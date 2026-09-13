@@ -8,6 +8,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using LifeTracker.Application.Admin.Dtos;
+using LifeTracker.Application.Common.Interfaces;
+using LifeTracker.Domain.Profiles;
 using LifeTracker.Infrastructure.Identity;
 using LifeTracker.Api.Extensions;
 
@@ -49,7 +51,8 @@ public static class AdminEndpoints
         group.MapPost("/", async (
             [FromBody] CreateAdminUserRequest request,
             [FromServices] UserManager<ApplicationUser> userManager,
-            [FromServices] RoleManager<ApplicationRole> roleManager) =>
+            [FromServices] RoleManager<ApplicationRole> roleManager,
+            [FromServices] ILifeTrackerDbContext dbContext) =>
         {
             var cleanEmail = request.Email.Trim().ToLowerInvariant();
             var existing = await userManager.FindByEmailAsync(cleanEmail);
@@ -83,6 +86,21 @@ public static class AdminEndpoints
             }
 
             await userManager.AddToRoleAsync(user, role);
+
+            // Sincronizar también en _dbContext.Profiles
+            var existingProfile = await dbContext.Profiles.FirstOrDefaultAsync(p => p.Id == user.Id);
+            if (existingProfile == null)
+            {
+                var profile = new UserProfile(user.Id, user.Email!, role, user.FullName, isActive: true);
+                dbContext.Profiles.Add(profile);
+            }
+            else
+            {
+                existingProfile.UpdateProfile(user.FullName, user.Email);
+                existingProfile.UpdateRole(role);
+                existingProfile.SetActive(true);
+            }
+            await dbContext.SaveChangesAsync();
 
             var dto = new AdminUserDto(
                 Id: user.Id,

@@ -14,6 +14,9 @@ services:
       - Supabase__Url=${SUPABASE_URL}
       - Supabase__AnonKey=${SUPABASE_ANON_KEY}
       - Supabase__JwtSecret=${SUPABASE_JWT_SECRET}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-${SUPABASE_JWT_SECRET}}
+      - Jwt__SecretKey=${JWT_SECRET_KEY:-${SUPABASE_JWT_SECRET}}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://localhost:3000,https://localhost:3000}
       - CloudflareR2__AccountId=${R2_ACCOUNT_ID}
       - CloudflareR2__AccessKeyId=${R2_ACCESS_KEY_ID}
       - CloudflareR2__SecretAccessKey=${R2_SECRET_ACCESS_KEY}
@@ -22,6 +25,20 @@ services:
       - Gemini__ApiKey=${GEMINI_API_KEY}
     ports:
       - "5000:5000"
+    networks:
+      - life_tracker_network
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: life_tracker_web
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL:-http://localhost:5000}
+    ports:
+      - "3000:3000"
     networks:
       - life_tracker_network
 

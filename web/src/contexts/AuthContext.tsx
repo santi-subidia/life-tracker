@@ -49,7 +49,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 function setCookie(name: string, value: string | null | undefined, days = 7) {
   if (typeof document === "undefined" || value === null || value === undefined) return;
   const expires = new Date(Date.now() + days * 864e5).toUTCString();
-  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; expires=${expires}; SameSite=Lax`;
+  const secureFlag = typeof window !== "undefined" && window.location.protocol === "https:" ? "; Secure" : "";
+  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; expires=${expires}; SameSite=Lax${secureFlag}`;
 }
 
 function getCookie(name: string): string | null {
@@ -60,7 +61,8 @@ function getCookie(name: string): string | null {
 
 function deleteCookie(name: string) {
   if (typeof document === "undefined") return;
-  document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
+  const secureFlag = typeof window !== "undefined" && window.location.protocol === "https:" ? "; Secure" : "";
+  document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax${secureFlag}`;
 }
 
 function buildAuthUser(id: string, email: string, fullName: string, role: UserRole): AuthUser {
